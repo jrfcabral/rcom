@@ -14,6 +14,10 @@
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1
+#define FLAG 0x7E
+#define A 0x03
+#define UA 0x01
+#define C_SET 0x07	
 
 volatile int STOP=FALSE;
 
@@ -83,21 +87,29 @@ int main(int argc, char** argv)
     
     /*testing
     buf[25] = '\n';*/
+
+
 	
+
+	int check = setupComms(fd);
+	if(!check){
+		printf("Handshake failed.\n");
+		return -1;
+	}
+	
+
 	printf("Type in message: ");
 	gets(buf);
-    
     res = write(fd,buf,strlen(buf)+1);   
     printf("%d bytes written\nWaiting for response...\n", res);
-	char rdbuf[255];
-	int n = 0;
-	while(n != strlen(rdbuf)){
-		read(fd, rdbuf[n++], 1);
+	char rdbuf[255], msg[255];
+	int n = 0, cnt = 0;
+	while(rdbuf[0] != '\0'){
+		n = read(fd, rdbuf, 1);
+		msg[cnt++] = rdbuf[0];
 	}
-	if(n == strlen(buf) && !strcmp(buf, rdbuf)){
-		printf("got back %s", rdbuf);
-		printf("great success!\n");
-	}
+	//n = read(fd, rdbuf, res);
+	printf("got back: %s\n", msg);
  
 
   /* 
@@ -106,7 +118,7 @@ int main(int argc, char** argv)
   */
 
 
-
+	sleep(2);
    
     if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
       perror("tcsetattr");
@@ -119,3 +131,30 @@ int main(int argc, char** argv)
     close(fd);
     return 0;
 }
+
+int setupComms(int fd){
+	unsigned char SET[5];
+	unsigned char RESP[5];
+	SET[0] = FLAG;	
+	SET[1] = A;
+	SET[2] = C_SET;
+	SET[3] = SET[1]^SET[2];
+	SET[4] = FLAG;
+
+	int ret = write(fd, SET, 5);
+	printf("%d\n", ret);
+	int i = 0;
+	for(i = 0; i < 5; i++){
+		int readRet = read(fd, &RESP[i], 1);	
+		printf("read returned: %d\nRead: %x\n", readRet, RESP[i]);
+	}
+	//printf("%x\n", RESP);
+	if(RESP[2] == UA && RESP[3] == RESP[2]^RESP[1]){
+		return 1;
+	}
+	else{
+		return -1;
+	}		
+}
+
+
