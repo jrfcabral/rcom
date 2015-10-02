@@ -13,6 +13,7 @@
 #define FALSE 0
 #define TRUE 1
 
+
 volatile int STOP=FALSE;
 
 int main(int argc, char** argv)
@@ -54,13 +55,21 @@ int main(int argc, char** argv)
 
     printf("New termios structure set\n");
 
+	char buf2[255];
+	int i = 0;
     while (STOP==FALSE) {       /* loop for input */
       res = read(fd,buf,1);   /* returns after 5 chars have been input */
       buf[res]=0;               /* so we can printf... */
+	buf2[i++] = buf[0];
       printf(":%s:%d\n", buf, res);
-      write(fd, buf, res+1);
-      if (buf[0]=='z') STOP=TRUE;
+     // write(fd, buf, res+1);
+      if (buf[0]=='\0') STOP=TRUE;
     }
+
+puts(buf2);
+    
+    write(fd, buf2, i+1);
+	sleep(2);
     tcsetattr(fd,TCSANOW,&oldtio);
     close(fd);
     return 0;
