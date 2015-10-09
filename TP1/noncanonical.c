@@ -15,7 +15,7 @@
 
 #define FLAG 0x7E
 #define A    0x03
-#define UA   0x02
+#define UA   0x03
 #define SET  0x07
 
 #define SUPERVISION 0
