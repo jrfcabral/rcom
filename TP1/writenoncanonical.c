@@ -8,18 +8,30 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <string.h>
+#include <signal.h>
 
 #define BAUDRATE B38400
 #define MODEMDEVICE "/dev/ttyS1"
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1
+#define MAX_RESEND 3
+#define TIMEOUT 3
 #define FLAG 0x7E
 #define A 0x03
-#define UA 0x01
+#define UA 0x03
 #define C_SET 0x07	
 
 volatile int STOP=FALSE;
+
+int sendCount = 0;
+int resend = 0;
+
+void alarmHandler(){
+	printf("SIGALARM received\n");
+	resend=1;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -88,17 +100,27 @@ int main(int argc, char** argv)
     /*testing
     buf[25] = '\n';*/
 
-
+	/* 
+	* Signal handler installation
+	*/
 	
+	struct sigaction newAct, oldAct;
+	
+	newAct.sa_handler = alarmHandler;
+	sigemptyset(&newAct.sa_mask);
+	newAct.sa_flags = 0;
+	
+	sigaction(SIGALRM, &newAct, &oldAct);
 
 	int check = setupComms(fd);
+	//printf("function returned: %d\n", check);
 	if(!check){
-		printf("Handshake failed.\n");
+		perror("Handshake failed.\n");
 		return -1;
 	}
 	
 
-	printf("Type in message: ");
+	/*printf("Type in message: ");
 	gets(buf);
     res = write(fd,buf,strlen(buf)+1);   
     printf("%d bytes written\nWaiting for response...\n", res);
@@ -109,7 +131,7 @@ int main(int argc, char** argv)
 		msg[cnt++] = rdbuf[0];
 	}
 	//n = read(fd, rdbuf, res);
-	printf("got back: %s\n", msg);
+	printf("got back: %s\n", msg);*/
  
 
   /* 
@@ -125,9 +147,6 @@ int main(int argc, char** argv)
       exit(-1);
     }
 
-
-
-
     close(fd);
     return 0;
 }
@@ -140,21 +159,34 @@ int setupComms(int fd){
 	SET[2] = C_SET;
 	SET[3] = SET[1]^SET[2];
 	SET[4] = FLAG;
-
+send: ;
+	
 	int ret = write(fd, SET, 5);
-	printf("%d\n", ret);
+	sendCount++;
+	if(sendCount > 4){
+		perror("Exceeded timeout attempts. Exiting\n");
+		return -1;
+	}
+	alarm(3);
+	printf("Sent %d bytes\n", ret);
 	int i = 0;
 	for(i = 0; i < 5; i++){
-		int readRet = read(fd, &RESP[i], 1);	
+		int readRet = read(fd, &RESP[i], 1);
+		if(resend){
+			resend = 0;
+			goto send;
+		}	
 		printf("read returned: %d\nRead: %x\n", readRet, RESP[i]);
 	}
+
 	//printf("%x\n", RESP);
 	if(RESP[2] == UA && RESP[3] == RESP[2]^RESP[1]){
+		alarm(0);
 		return 1;
 	}
 	else{
-		return -1;
-	}		
+		goto send;	
+	}
 }
 
 
