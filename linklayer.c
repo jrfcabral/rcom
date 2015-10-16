@@ -27,8 +27,8 @@ typedef enum {
 	WAIT_A,
 	WAIT_C,
 	WAIT_BCC,
-    BCC_OK,
-    EXIT
+  	BCC_OK,
+    	EXIT	
 } state;
 
 
@@ -65,7 +65,7 @@ int main(int argc, char **argv){
 	}
 	
 	
-	llopen(4, SEND);
+	llopen(0, SEND);
 }
 
 int llopen(int port, int mode){
@@ -130,20 +130,20 @@ int llopen(int port, int mode){
 
             switch(currentState){
                 case WAIT_FLAG:
-					currentState = verifyByte(FLAG, in, 1, 0);                  
+					currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
                 break;
                 case WAIT_A:
-					currentState = verifyByte(A_SEND, in, 2, 0);                 
+					currentState = verifyByte(A_SEND, in, WAIT_C, WAIT_FLAG);                 
                 break;
                 case WAIT_C:
-					currentState = verifyByte(C_SET, in, 3, 0);                   
+					currentState = verifyByte(C_SET, in, WAIT_BCC, WAIT_FLAG);                   
 					break;
                 case WAIT_BCC: 
-	               currentState = verifyByte(0x04, in, 5, 0);                 
+	               currentState = verifyByte(0x04, in, BCC_OK, WAIT_FLAG);                 
 	               break;
                    
                 case BCC_OK:
-					currentState = verifyByte(FLAG, in, 6, 0);                 
+					currentState = verifyByte(FLAG, in, EXIT, WAIT_FLAG);                 
                     break;
                 default:
                     perror("Something very strange happened\n");
@@ -180,22 +180,24 @@ int llopen(int port, int mode){
 					unsigned char in;
 					if(!read(fd, &in, 1))
 						continue;
+					printf("%x\n", in);
 			
 				  switch(currentState){
 		            case WAIT_FLAG:
-						currentState = verifyByte(FLAG, in, 1, 0);                  
+				currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
 		            break;
 		            case WAIT_A:
-						currentState = verifyByte(A_SEND, in, 2, 0);                 
-		            break;
+				currentState = verifyByte(A_SEND, in, WAIT_C, WAIT_FLAG);                 
+	
+			            break;
 		            case WAIT_C:
-						currentState = verifyByte(C_UA, in, 3, 0);                   
-						break;
+				currentState = verifyByte(C_UA, in, WAIT_BCC, WAIT_FLAG);                   
+				break;
 		            case WAIT_BCC: 
-			           currentState = verifyByte(A_SEND^C_UA, in, 5, 0);                 
+			           currentState = verifyByte(A_SEND^C_UA, in, BCC_OK, WAIT_FLAG);                 
 			           break;                   
 		            case BCC_OK:
-						currentState = verifyByte(FLAG, in, 6, 0);                 
+				currentState = verifyByte(FLAG, in, EXIT, WAIT_FLAG);                 
 		                break;
 		            default:
 		                perror("Something very strange happened\n");
