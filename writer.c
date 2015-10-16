@@ -9,6 +9,8 @@
 #include <signal.h>
 #include <unistd.h>
 
+
+
 #define BAUDRATE B38400
 #define MAX_RESEND 3
 #define TIMEOUT 3
@@ -123,72 +125,25 @@ int llopen(int port, int mode){
                 continue;
             if(n >= 2)
                  correctBcc = buf[1]^buf[2];
-            printf("read: %x\n", in);
 
-		
-			
+            printf("read: %x\n", in);			
 
             switch(currentState){
                 case WAIT_FLAG:
-					currentState = verifyByte(FLAG, in, 1, 0);
-                    /*if (in == FLAG){
-                        currentState = WAIT_A;
-                        buf[n++] = in;
-                    }*/
+					currentState = verifyByte(FLAG, in, 1, 0);                  
                 break;
                 case WAIT_A:
-					currentState = verifyByte(A_SEND, in, 2, 0);
-                    /*if (in == A_SEND){
-                        currentState = WAIT_C;
-                        buf[n++] = in;
-                    }
-                    else if(in == FLAG){
-                      continue;
-                    }
-                    else{
-                        n=0;
-                        currentState = WAIT_FLAG;
-                    }*/
+					currentState = verifyByte(A_SEND, in, 2, 0);                 
                 break;
                 case WAIT_C:
-					currentState = verifyByte(C_SET, in, 3, 0);
-                    /*if (in == C_SET){
-                        currentState = WAIT_BCC;
-                        buf[n++] = in;
-                    }
-                    else if(in == FLAG){
-                         currentState = WAIT_A;
-                         n = 1;
-                    }
-                    else{
-                        n=0;
-                        currentState = WAIT_FLAG;
-                    }*/
-                    break;
+					currentState = verifyByte(C_SET, in, 3, 0);                   
+					break;
                 case WAIT_BCC: 
-                   currentState = verifyByte(0x04, in, 5, 0);
-                    /*if (in == correctBcc){
-                        currentState = BCC_OK;
-                        buf[n++] = in;
-                    }
-                    else if(in == FLAG){
-                         currentState = WAIT_A;
-                         n = 1;
-                    }
-                    else{
-                        n=0;
-                        currentState = WAIT_FLAG;
-                    }*/
-                    break;
-                    
+	               currentState = verifyByte(0x04, in, 5, 0);                 
+	               break;
+                   
                 case BCC_OK:
-					currentState = verifyByte(FLAG, in, 6, 0);
-                    /*if (in == FLAG)
-                        currentState = EXIT;
-                    else{
-                        n = 0;
-                        currentState = WAIT_FLAG;
-                    }*/
+					currentState = verifyByte(FLAG, in, 6, 0);                 
                     break;
                 default:
                     perror("Something very strange happened\n");
@@ -216,26 +171,40 @@ int llopen(int port, int mode){
       			perror("tcsetattr");
      			exit(-1);
         	}
-		unsigned char SET[5] = {FLAG, A_SEND, C_SET, SET[1]^SET[2], FLAG};
+
+			unsigned char SET[5] = {FLAG, A_SEND, C_SET, SET[1]^SET[2], FLAG};
 	    	write(fd, SET, 5);
+			state currentState = WAIT_FLAG;
+			while(currentState != EXIT){
+
+					unsigned char in;
+					if(!read(fd, &in, 1))
+						continue;
+			
+				  switch(currentState){
+		            case WAIT_FLAG:
+						currentState = verifyByte(FLAG, in, 1, 0);                  
+		            break;
+		            case WAIT_A:
+						currentState = verifyByte(A_SEND, in, 2, 0);                 
+		            break;
+		            case WAIT_C:
+						currentState = verifyByte(C_UA, in, 3, 0);                   
+						break;
+		            case WAIT_BCC: 
+			           currentState = verifyByte(A_SEND^C_UA, in, 5, 0);                 
+			           break;                   
+		            case BCC_OK:
+						currentState = verifyByte(FLAG, in, 6, 0);                 
+		                break;
+		            default:
+		                perror("Something very strange happened\n");
+		                exit(-3);
+		                break;                        
+		        }
+			}
 	}
 
 	return fd;	
 }
-
-
-/*char* readByte(int fd, char *buffer){
-    static int n = 0;
-    n++;
-    buffer = realloc(buffer, n);
-    if (!buffer)
-        return buffer;
-
-    int l = read(fd, buffer[n-1], 1);   
-    if (!l){
-        n--;
-        buffer = realloc(buffer, n);
-    }
-    return buffer;
-}*/
 
