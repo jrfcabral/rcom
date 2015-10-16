@@ -1,93 +1,210 @@
-#include "linklayer.h"
-#include "ApplicationLayer.h"
-
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
+#include <termios.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#include <signal.h>
 #include <unistd.h>
-#include "alarm.h"
 
-const int FLAG = 0x7E;
-const int A = 0x03;
-const int E = 0x7D;
 
-LinkLayer* l1;
 
-struct termios oldtio, newtio; //old and new termios
+#define BAUDRATE B38400
+#define MAX_RESEND 3
+#define TIMEOUT 3
+#define FLAG 0x7E
+#define A_SEND 0x03
+#define A_RECEIVE 0x01
+#define C_UA 0x03
+#define C_SET 0x07
+#define SEND 0
+#define RECEIVE 1
 
-int linkLayerInit(char* port, ConnectionMode mode, int baudrate, int msgMaxSize, int numTries, int timeOut){
+typedef enum {
+	WAIT_FLAG,
+	WAIT_A,
+	WAIT_C,
+	WAIT_BCC,
+    BCC_OK,
+    EXIT
+} state;
 
+
+int resend = 0;
+
+void alarmHandler(){
+	write(STDOUT_FILENO, "SIGALRM received\n", 17);
+	resend = 1;
+}
+
+state verifyByte(unsigned char expected, unsigned char read, int ifSucc, int ifFail){
+	state toGo;	
+	if(expected == read){
+		toGo = (state) ifSucc;
+	}
+	else if(read == FLAG){
+		toGo = WAIT_A;
+	}
+	else{
+		toGo = (state) ifFail;
+	}
+	return toGo;
 }
 
 
-int CurrentSettingsNewTermios(){
-
+int main(int argc, char **argv){
+	/*char *arg = (char *) malloc(strlen(argv[1])*sizeof(char)+1);
+	strcpy(arg, argv[1]);
+	char *tok1, *tok2;
+	tok1 = strtok(argv[1], "/");
+	tok2 = strtok(NULL, "/");*/
+	if(argc != 2 /*|| (!strcmp(tok1, "dev") && !strncmp(tok2, "ttyS", 5))*/){
+		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
+	}
+	
+	
+	llopen(4, SEND);
 }
 
-int saveSettings(){
+int llopen(int port, int mode){
+	
+	
+	signal(SIGALRM, alarmHandler); //DEPRE-Frickin-CATED	
 
-}
+	int fd;
+	
+	char fileName[15];
+    sprintf(fileName, "/dev/ttyS%d", port);
+	
+	fd = open(fileName, O_RDWR|O_NOCTTY);
+	if(fd <0){
+		perror(fileName);
+		exit(-1);	
+	}
+	
+	struct termios oldTio, newTio;
 
-int setTermios(){
+	if(tcgetattr(fd, &oldTio) == -1){
+		perror("tcgetattr error");
+		exit(-1);	
+	}
+	
+	memset(&newTio, 0, sizeof(newTio)); //possible error here. if error use bzero instead
+	newTio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
+    	newTio.c_iflag = IGNPAR;
+    	newTio.c_oflag = 0;
 
-	bzero(&l1->newtio, sizeof(&l1->newtio)); 
-	l1->newtio.c_cflag = B38400|CS8|CLOCAL|CREAD;
-	l1->newtio.c_iflag = IGNPAR|ICRNL;
-	l1->newtio.c_oflag = 0;
-	l1->newtio.c_lflag = ICANON;
-	l1->newtio.c_cc[VTIME] = 3; /* temporizador entre   
-								caracteres*/
-	l1->newtio.c_cc[VMIN] = 0;  /* bloqueia até ler 5 
-								caracteres */
-	tcflush(fd, TCIFLUSH);
-	tcsetattr(fd,TCSANOW,&l1->newtio);
+    	/* set input mode (non-canonical, no echo,...) */
+    	
 
-}
+	if(mode == RECEIVE){
+		newTio.c_lflag = 0;
 
-int openSerialPort(char * port){
+    		newTio.c_cc[VTIME]    = 0;   /* inter-character timer unused */
+    		newTio.c_cc[VMIN]     = 1;   /* blocking read until 5 chars received */
+		
+		tcflush(fd, TCIOFLUSH);
+	
+		if ( tcsetattr(fd,TCSANOW,&newTio) == -1) {
+	      		perror("tcsetattr");
+	     		exit(-1);
+	    	}
 
-	int fdport = open(port, O_RDWR | O_NOCTTY);
+        printf("Ready to read\n");
+        state currentState = WAIT_FLAG;
+		printf("%d\n", currentState);
+        char buf[255];
+        int n = 0;
+        while(currentState != EXIT){
+           unsigned char in;
+            int l = read(fd, &in, 1);
+            char correctBcc;
+            if (!l)
+                continue;
+            if(n >= 2)
+                 correctBcc = buf[1]^buf[2];
 
-	return fdport; //returns, if successfully, the file descriptor of the port we're trying to open. 
-}
+            printf("read: %x\n", in);			
 
+            switch(currentState){
+                case WAIT_FLAG:
+					currentState = verifyByte(FLAG, in, 1, 0);                  
+                break;
+                case WAIT_A:
+					currentState = verifyByte(A_SEND, in, 2, 0);                 
+                break;
+                case WAIT_C:
+					currentState = verifyByte(C_SET, in, 3, 0);                   
+					break;
+                case WAIT_BCC: 
+	               currentState = verifyByte(0x04, in, 5, 0);                 
+	               break;
+                   
+                case BCC_OK:
+					currentState = verifyByte(FLAG, in, 6, 0);                 
+                    break;
+                default:
+                    perror("Something very strange happened\n");
+                    exit(-3);
+                    break;                        
+                
+            }
+            
+        }
+		printf("Received SET frame\n");
+        unsigned char UA[5] = {FLAG, A_RECEIVE, C_UA, UA[1]^UA[2], FLAG};
+        write(fd, UA, 5);
+       
+		
+	}
+	else if(mode == SEND){
+		newTio.c_lflag = 0;
 
-int closeSerialPort() {
+    		newTio.c_cc[VTIME]    = 10;   /* inter-character timer unused */
+    		newTio.c_cc[VMIN]     = 0;   /* blocking read until 5 chars received */
+		
+		tcflush(fd, TCIOFLUSH);
 
-	if (tcsetattr(al->fd, TCSANOW, &l1->oldtio) == -1) { //sets the parameters (immediately) refered by the application layer fd 
-														 // from the old termios 
-		perror("tcsetattr");
-		return 0;
+		if ( tcsetattr(fd,TCSANOW,&newTio) == -1) {
+      			perror("tcsetattr");
+     			exit(-1);
+        	}
+
+			unsigned char SET[5] = {FLAG, A_SEND, C_SET, SET[1]^SET[2], FLAG};
+	    	write(fd, SET, 5);
+			state currentState = WAIT_FLAG;
+			while(currentState != EXIT){
+
+					unsigned char in;
+					if(!read(fd, &in, 1))
+						continue;
+			
+				  switch(currentState){
+		            case WAIT_FLAG:
+						currentState = verifyByte(FLAG, in, 1, 0);                  
+		            break;
+		            case WAIT_A:
+						currentState = verifyByte(A_SEND, in, 2, 0);                 
+		            break;
+		            case WAIT_C:
+						currentState = verifyByte(C_UA, in, 3, 0);                   
+						break;
+		            case WAIT_BCC: 
+			           currentState = verifyByte(A_SEND^C_UA, in, 5, 0);                 
+			           break;                   
+		            case BCC_OK:
+						currentState = verifyByte(FLAG, in, 6, 0);                 
+		                break;
+		            default:
+		                perror("Something very strange happened\n");
+		                exit(-3);
+		                break;                        
+		        }
+			}
 	}
 
-	close(al->fd); //closes the application layer
-
-	return 1;
+	return fd;	
 }
 
-unsigned char* createCommand(ControlField C) {
-	CMD_SIZE = 5*sizeof(char);
-	unsigned char* command = malloc(CMD_SIZE);
-
-	command[0] = FLAG;
-	command[1] = A;
-	command[2] = C;
-	if (C == C_REJ || C == C_RR)
-		command[2] |= (ll->sequenceNumber << 7);
-	command[3] = command[1] ^ command[2];
-	command[4] = FLAG;
-
-	return command;
-}
-
-
-
-//openserialport
-//closeSerialPort
-//int llopen
-//int llwrite
-//int llread
-//int llclose
