@@ -1,7 +1,12 @@
 #pragma once
+#include "linklayer.h"
 
 extern int alarmOff;
 
 void alarmHandler(int signal);
-void setAlarm();
+void installAlarm();
 void stopAlarm();
+
+int resend;
+int retries;
+int abort_send;

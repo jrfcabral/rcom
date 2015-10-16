@@ -33,14 +33,13 @@ typedef enum {
 } ControlField; //campo de controlo das tramas de supervisão e nao numeradas 
 
 typedef struct{
-	char port[50] //port : format /dev/ttySx
+	char port[50]; //port : format /dev/ttySx
 	int baudRate;
-	int msgMaxSize;
-	info sequenceNumber; //frame sequece number
-	info timeOut; //timeout value
-	info numTransmissions //number of retries if it fails
+	int sequenceNumber; //frame sequece number
+	int timeOut; //timeout value
+	int numTransmissions; //number of retries if it fails
 
-	char frame[MAX_SIZE]
+	char frame[MAX_SIZE];
 
 	//termios
 
@@ -50,5 +49,5 @@ typedef struct{
 
 }LinkLayer;
 
-extern LinkLayer* ll;
+LinkLayer ll;
 

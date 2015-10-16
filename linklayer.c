@@ -9,6 +9,8 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include "alarm.h"
+
 
 
 #define BAUDRATE B38400
@@ -21,6 +23,8 @@
 #define C_SET 0x07
 #define SEND 0
 #define RECEIVE 1
+#define ESCAPE 0x10
+
 
 typedef enum {
 	WAIT_FLAG,
@@ -31,15 +35,7 @@ typedef enum {
     	EXIT	
 } state;
 
-
-int resend = 0;
-
-void alarmHandler(){
-	write(STDOUT_FILENO, "SIGALRM received\n", 17);
-	resend = 1;
-}
-
-state verifyByte(unsigned char expected, unsigned char read, int ifSucc, int ifFail){
+state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state ifFail){
 	state toGo;	
 	if(expected == read){
 		toGo = (state) ifSucc;
@@ -63,26 +59,66 @@ int main(int argc, char **argv){
 	if(argc != 2 /*|| (!strcmp(tok1, "dev") && !strncmp(tok2, "ttyS", 5))*/){
 		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 	}
+	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
+	char* stuffedBuffer = (char*) malloc(2);
+	int r = byteStuffing(buffer, 5, &stuffedBuffer);
+	llopen(0, RECEIVE);
+}
+
+int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
+	int n;
+	int newLength = 0;
+	for(n = 0; n < length; n++){	
+		printf("reading char %c", buffer[n]);
+		switch(buffer[n]){
+			case FLAG:				
+				newLength +=2;
+				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
+				*stuffedBuffer[newLength-2] = ESCAPE;
+				*stuffedBuffer[newLength-1] = FLAG;
+				write(STDOUT_FILENO, *stuffedBuffer, newLength);
+				break;
+			case ESCAPE:
+				newLength +=2;
+				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
+				*stuffedBuffer[newLength-2] = ESCAPE;
+				*stuffedBuffer[newLength-1] = ESCAPE;
+				write(STDOUT_FILENO, *stuffedBuffer, newLength);
+				break;
+			default:
+				newLength++;
+				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
+				*stuffedBuffer[newLength-1] = buffer[n];
+				write(STDOUT_FILENO, *stuffedBuffer, newLength);
+				break;
+		}
+	}
+	return newLength;
 	
+}
+
+int llwrite(int fd, char* buffer, int length){
 	
-	llopen(0, SEND);
 }
 
 int llopen(int port, int mode){
-	
-	
-	signal(SIGALRM, alarmHandler); //DEPRE-Frickin-CATED	
 
+	
+	installAlarm();
 	int fd;
 	
 	char fileName[15];
     sprintf(fileName, "/dev/ttyS%d", port);
-	
-	fd = open(fileName, O_RDWR|O_NOCTTY);
+	strcpy(ll.port, fileName);
+	fd = open(ll.port, O_RDWR|O_NOCTTY);
 	if(fd <0){
 		perror(fileName);
 		exit(-1);	
 	}
+	
+	ll.baudRate = BAUDRATE;
+	ll.timeOut = 3;
+	ll.numTransmissions = 3;
 	
 	struct termios oldTio, newTio;
 
@@ -90,9 +126,10 @@ int llopen(int port, int mode){
 		perror("tcgetattr error");
 		exit(-1);	
 	}
+	ll.oldtio = oldTio;
 	
 	memset(&newTio, 0, sizeof(newTio)); //possible error here. if error use bzero instead
-	newTio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
+	newTio.c_cflag = ll.baudRate | CS8 | CLOCAL | CREAD;
     	newTio.c_iflag = IGNPAR;
     	newTio.c_oflag = 0;
 
@@ -119,6 +156,7 @@ int llopen(int port, int mode){
         int n = 0;
         while(currentState != EXIT){
            unsigned char in;
+           
             int l = read(fd, &in, 1);
             char correctBcc;
             if (!l)
@@ -166,45 +204,57 @@ int llopen(int port, int mode){
     		newTio.c_cc[VMIN]     = 0;   /* blocking read until 5 chars received */
 		
 		tcflush(fd, TCIOFLUSH);
-
+		
 		if ( tcsetattr(fd,TCSANOW,&newTio) == -1) {
       			perror("tcsetattr");
      			exit(-1);
         	}
 
+send: ;		resend = 0;
 			unsigned char SET[5] = {FLAG, A_SEND, C_SET, SET[1]^SET[2], FLAG};
-	    	write(fd, SET, 5);
+			if(	write(fd, SET, 5) != 5)
+				return -1;
+			printf("escrevi\n");	
+			alarm(ll.timeOut);
 			state currentState = WAIT_FLAG;
 			while(currentState != EXIT){
 
 					unsigned char in;
-					if(!read(fd, &in, 1))
+					if(!read(fd, &in, 1)){
+						printf("Tou aqui\n");
+						if(resend)
+							goto send;
+						else if (abort_send)
+							return -1;
 						continue;
+					}
+					
 					printf("%x\n", in);
+					printf("Current state is %d\n", currentState);
 			
 				  switch(currentState){
 		            case WAIT_FLAG:
-				currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
-		            break;
+						currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
+			            break;
 		            case WAIT_A:
-				currentState = verifyByte(A_SEND, in, WAIT_C, WAIT_FLAG);                 
-	
+						currentState = verifyByte(A_RECEIVE, in, WAIT_C, WAIT_FLAG);                 	
 			            break;
 		            case WAIT_C:
-				currentState = verifyByte(C_UA, in, WAIT_BCC, WAIT_FLAG);                   
-				break;
+						currentState = verifyByte(C_UA, in, WAIT_BCC, WAIT_FLAG);                   
+						break;
 		            case WAIT_BCC: 
-			           currentState = verifyByte(A_SEND^C_UA, in, BCC_OK, WAIT_FLAG);                 
+			           currentState = verifyByte(A_RECEIVE^C_UA, in, BCC_OK, WAIT_FLAG);                 
 			           break;                   
 		            case BCC_OK:
-				currentState = verifyByte(FLAG, in, EXIT, WAIT_FLAG);                 
+						currentState = verifyByte(FLAG, in, EXIT, WAIT_FLAG);                 
 		                break;
 		            default:
 		                perror("Something very strange happened\n");
-		                exit(-3);
+		                return -1;
 		                break;                        
 		        }
 			}
+			alarm(0);
 	}
 
 	return fd;	
