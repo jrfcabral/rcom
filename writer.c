@@ -28,7 +28,7 @@ typedef enum {
     BCC_OK,
     EXIT
 } state;
-	
+
 
 int resend = 0;
 
@@ -36,6 +36,21 @@ void alarmHandler(){
 	write(STDOUT_FILENO, "SIGALRM received\n", 17);
 	resend = 1;
 }
+
+state verifyByte(unsigned char expected, unsigned char read, int ifSucc, int ifFail){
+	state toGo;	
+	if(expected == read){
+		toGo = (state) ifSucc;
+	}
+	else if(read == FLAG){
+		toGo = WAIT_A;
+	}
+	else{
+		toGo = (state) ifFail;
+	}
+	return toGo;
+}
+
 
 int main(int argc, char **argv){
 	/*char *arg = (char *) malloc(strlen(argv[1])*sizeof(char)+1);
@@ -97,10 +112,11 @@ int llopen(int port, int mode){
 
         printf("Ready to read\n");
         state currentState = WAIT_FLAG;
+		printf("%d\n", currentState);
         char buf[255];
         int n = 0;
         while(currentState != EXIT){
-            char in;
+           unsigned char in;
             int l = read(fd, &in, 1);
             char correctBcc;
             if (!l)
@@ -109,15 +125,20 @@ int llopen(int port, int mode){
                  correctBcc = buf[1]^buf[2];
             printf("read: %x\n", in);
 
+		
+			
+
             switch(currentState){
                 case WAIT_FLAG:
-                    if (in == FLAG){
+					currentState = verifyByte(FLAG, in, 1, 0);
+                    /*if (in == FLAG){
                         currentState = WAIT_A;
                         buf[n++] = in;
-                    }
+                    }*/
                 break;
                 case WAIT_A:
-                    if (in == A_SEND){
+					currentState = verifyByte(A_SEND, in, 2, 0);
+                    /*if (in == A_SEND){
                         currentState = WAIT_C;
                         buf[n++] = in;
                     }
@@ -127,10 +148,11 @@ int llopen(int port, int mode){
                     else{
                         n=0;
                         currentState = WAIT_FLAG;
-                    }
+                    }*/
                 break;
                 case WAIT_C:
-                    if (in == C_SET){
+					currentState = verifyByte(C_SET, in, 3, 0);
+                    /*if (in == C_SET){
                         currentState = WAIT_BCC;
                         buf[n++] = in;
                     }
@@ -141,11 +163,11 @@ int llopen(int port, int mode){
                     else{
                         n=0;
                         currentState = WAIT_FLAG;
-                    }
+                    }*/
                     break;
                 case WAIT_BCC: 
-                   
-                    if (in == correctBcc){
+                   currentState = verifyByte(0x04, in, 5, 0);
+                    /*if (in == correctBcc){
                         currentState = BCC_OK;
                         buf[n++] = in;
                     }
@@ -156,16 +178,17 @@ int llopen(int port, int mode){
                     else{
                         n=0;
                         currentState = WAIT_FLAG;
-                    }
+                    }*/
                     break;
                     
                 case BCC_OK:
-                    if (in == FLAG)
+					currentState = verifyByte(FLAG, in, 6, 0);
+                    /*if (in == FLAG)
                         currentState = EXIT;
                     else{
                         n = 0;
                         currentState = WAIT_FLAG;
-                    }
+                    }*/
                     break;
                 default:
                     perror("Something very strange happened\n");
@@ -175,10 +198,10 @@ int llopen(int port, int mode){
             }
             
         }
-
+		printf("Received SET frame\n");
         unsigned char UA[5] = {FLAG, A_RECEIVE, C_UA, UA[1]^UA[2], FLAG};
         write(fd, UA, 5);
-        printf("Received SET frame\n");
+       
 		
 	}
 	else if(mode == SEND){
@@ -192,11 +215,14 @@ int llopen(int port, int mode){
 		if ( tcsetattr(fd,TCSANOW,&newTio) == -1) {
       			perror("tcsetattr");
      			exit(-1);
-        }
+        	}
+		unsigned char SET[5] = {FLAG, A_SEND, C_SET, SET[1]^SET[2], FLAG};
+	    	write(fd, SET, 5);
 	}
 
-	
+	return fd;	
 }
+
 
 /*char* readByte(int fd, char *buffer){
     static int n = 0;
