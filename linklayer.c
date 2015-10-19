@@ -52,7 +52,7 @@ state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state
 int main(int argc, char **argv){
 	strcpy(ll.port, argv[1]);
 	int mode = atoi(argv[2]);
-	if(argc != 2) {
+	if(argc != 3 || mode != SEND || mode != RECEIVE) {
 		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 	}
 
@@ -75,14 +75,14 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 				newLength +=2;
 				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
 				stuffedBuffer[0][newLength-2] = ESCAPE;
-				stuffedBuffer[0][newLength-1] = FLAG;
+				stuffedBuffer[0][newLength-1] = 0x5e;
 				write(STDOUT_FILENO, *stuffedBuffer, newLength);
 				break;
 			case ESCAPE:
 				newLength +=2;
 				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
 				stuffedBuffer[0][newLength-2] = ESCAPE;
-				stuffedBuffer[0][newLength-1] = ESCAPE;
+				stuffedBuffer[0][newLength-1] = 0x5d;
 				write(STDOUT_FILENO, *stuffedBuffer, newLength);
 				break;
 			default:
