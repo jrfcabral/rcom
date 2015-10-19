@@ -60,39 +60,43 @@ int main(int argc, char **argv){
 		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 	}
 	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
-	char* stuffedBuffer = (char*) malloc(2);
+	char* stuffedBuffer;
 	int r = byteStuffing(buffer, 5, &stuffedBuffer);
-	llopen(0, RECEIVE);
+	//llopen(0, RECEIVE);
 }
 
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 	int n;
+	*stuffedBuffer = (char*) malloc(1);
+	printf("cheguei\n");
 	int newLength = 0;
 	for(n = 0; n < length; n++){	
-		printf("reading char %c", buffer[n]);
+		printf("reading char %c\n", buffer[n]);
 		switch(buffer[n]){
 			case FLAG:				
 				newLength +=2;
 				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
-				*stuffedBuffer[newLength-2] = ESCAPE;
-				*stuffedBuffer[newLength-1] = FLAG;
+				printf("realloced\n");
+				stuffedBuffer[0][newLength-2] = ESCAPE;
+				stuffedBuffer[0][newLength-1] = FLAG;
 				write(STDOUT_FILENO, *stuffedBuffer, newLength);
 				break;
 			case ESCAPE:
 				newLength +=2;
 				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
-				*stuffedBuffer[newLength-2] = ESCAPE;
-				*stuffedBuffer[newLength-1] = ESCAPE;
+				printf("realloced2\n");
+				stuffedBuffer[0][newLength-2] = ESCAPE;
+				stuffedBuffer[0][newLength-1] = ESCAPE;
 				write(STDOUT_FILENO, *stuffedBuffer, newLength);
 				break;
 			default:
 				newLength++;
 				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
-				*stuffedBuffer[newLength-1] = buffer[n];
-				write(STDOUT_FILENO, *stuffedBuffer, newLength);
+				stuffedBuffer[0][newLength-1] = buffer[n];
 				break;
 		}
 	}
+	printf("%.9s\n", *stuffedBuffer);
 	return newLength;
 	
 }
