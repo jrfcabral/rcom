@@ -5,7 +5,17 @@ The link layer is the group of methods and communications protocols that only op
 #include <termios.h>
 #include <stdio.h>
 
-unsigned int info;
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <string.h>
+#include <signal.h>
+#include <unistd.h>
+
 
 #define FALSE 0
 #define TRUE 1
@@ -14,7 +24,29 @@ unsigned int info;
 #define BIT(n) (0x01 << n)
 
 
+#define BAUDRATE B38400
+#define MAX_RESEND 3
+#define TIMEOUT 3
+#define FLAG 0x7E
+#define A_SEND 0x03
+#define A_RECEIVE 0x01
+#define C_UA 0x03
+#define C_SET 0x07
+#define SEND 0
+#define RECEIVE 1
+#define ESCAPE 0x10
+
+unsigned int info;
 /*FRAME FORMAT AND TYPES*/
+
+typedef enum {
+	WAIT_FLAG,
+	WAIT_A,
+	WAIT_C,
+	WAIT_BCC,
+	BCC_OK,
+	EXIT	
+} state;
 
 typedef enum {
 	I_START, I_FLAG, I_A, I_C, I_BCC, I_STOP
@@ -27,10 +59,6 @@ typedef enum {
 	REJ, //reject / negative ACK
 	DISC //disconnect
 } Control;
-
-typedef enum {
-	C_SET = 0x03, C_UA = 0x07, C_RR = 0x05, C_REJ = 0x01, C_DISC = 0x0B
-} ControlField; //campo de controlo das tramas de supervisão e nao numeradas 
 
 typedef struct{
 	char port[50]; //port : format /dev/ttySx

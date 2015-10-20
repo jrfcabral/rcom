@@ -1,39 +1,5 @@
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <strings.h>
-#include <string.h>
-#include <signal.h>
-#include <unistd.h>
-
 #include "alarm.h"
-
-
-
-#define BAUDRATE B38400
-#define MAX_RESEND 3
-#define TIMEOUT 3
-#define FLAG 0x7E
-#define A_SEND 0x03
-#define A_RECEIVE 0x01
-#define C_UA 0x03
-#define C_SET 0x07
-#define SEND 0
-#define RECEIVE 1
-#define ESCAPE 0x10
-
-
-typedef enum {
-	WAIT_FLAG,
-	WAIT_A,
-	WAIT_C,
-	WAIT_BCC,
-	BCC_OK,
-	EXIT	
-} state;
+#include "linklayer.h"
 
 state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state ifFail){
 	state toGo;	
@@ -52,8 +18,8 @@ state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state
 int main(int argc, char **argv){
 	strcpy(ll.port, argv[1]);
 	int mode = atoi(argv[2]);
-	if(argc != 3 || mode != SEND || mode != RECEIVE) {
-//		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
+	if(argc != 3 ||( mode != SEND && mode != RECEIVE)) {
+		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 	}
 
 	ll.timeOut = 10;
@@ -65,9 +31,6 @@ int main(int argc, char **argv){
 	char* unstuffedBuffer;
 	int r = byteStuffing(buffer, 5, &stuffedBuffer);
 	int j = byteDestuffing(stuffedBuffer, r, &unstuffedBuffer);
-//	if (!strcmp(stuffedBuffer, unstuffedBuffer))
-//		printf("great success");	
-	//	llopen(0, mode);
 }
 
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
