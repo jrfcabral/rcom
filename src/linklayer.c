@@ -53,16 +53,21 @@ int main(int argc, char **argv){
 	strcpy(ll.port, argv[1]);
 	int mode = atoi(argv[2]);
 	if(argc != 3 || mode != SEND || mode != RECEIVE) {
-		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
+//		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 	}
 
 	ll.timeOut = 10;
 	ll.sequenceNumber = 0;
 	ll.numTransmissions  = 3;
-	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
+//	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
+	char buffer[] = {0, 0, 1, 1, 1,FLAG,2,3};
 	char* stuffedBuffer;
+	char* unstuffedBuffer;
 	int r = byteStuffing(buffer, 5, &stuffedBuffer);
-	llopen(0, mode);
+	int j = byteDestuffing(stuffedBuffer, r, &unstuffedBuffer);
+//	if (!strcmp(stuffedBuffer, unstuffedBuffer))
+//		printf("great success");	
+	//	llopen(0, mode);
 }
 
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
@@ -70,29 +75,38 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 	*stuffedBuffer = (char*) malloc(1);
 	int newLength = 0;
 	for(n = 0; n < length; n++){	
-		switch(buffer[n]){
-			case FLAG:				
-				newLength +=2;
-				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
-				stuffedBuffer[0][newLength-2] = ESCAPE;
-				stuffedBuffer[0][newLength-1] = 0x5e;
-				write(STDOUT_FILENO, *stuffedBuffer, newLength);
-				break;
-			case ESCAPE:
-				newLength +=2;
-				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
-				stuffedBuffer[0][newLength-2] = ESCAPE;
-				stuffedBuffer[0][newLength-1] = 0x5d;
-				write(STDOUT_FILENO, *stuffedBuffer, newLength);
-				break;
-			default:
-				newLength++;
-				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
-				stuffedBuffer[0][newLength-1] = buffer[n];
-				break;
+		if (buffer[n] == FLAG || buffer[n] == ESCAPE){
+			newLength+=2;
+			*stuffedBuffer = realloc(*stuffedBuffer, newLength);
+			stuffedBuffer[0][newLength-2]=ESCAPE;
+			stuffedBuffer[0][newLength-1]= buffer[n]^0x20;
+		}
+		else{
+			*stuffedBuffer = realloc(*stuffedBuffer, ++newLength);
+			stuffedBuffer[0][newLength-1] = buffer[n];
 		}
 	}
+	write(STDOUT_FILENO, *stuffedBuffer, newLength);
 	return newLength;
+
+}
+
+int byteDestuffing(const char* stuffedBuffer, const int length, char** buffer){
+	int n = 0;
+	*buffer = (char*) malloc(1);	
+
+	int i;
+	for(i = 0; i < length; i++){
+		char current = stuffedBuffer[i];
+		n++;
+		*buffer = realloc(*buffer, n);
+		if(current == ESCAPE){
+			buffer[0][n] = stuffedBuffer[i+1]^0x20;
+			i++;
+		}
+		else
+			buffer[0][n] = stuffedBuffer[i];
+	}
 
 }
 
@@ -108,11 +122,17 @@ char generateBCC(const char* buffer, const int length){
 int llwrite(int fd, char* buffer, int length){
 	char dataBCC = generateBCC(buffer, length);
 	char *bufferStuffed;
-	char header[] = { FLAG, 0x03, (ll.sequenceNumber << 5), header[1]^header[2], FLAG};
+	char header[] = { FLAG, 0x03, (ll.sequenceNumber << 5), header[1]^header[2] };
 	int n= byteStuffing(buffer, &bufferStuffed, length);
+	char* message = (char*)  malloc(length+6);
+	memcpy(message, header, 4);
+	memcpy(message+4, buffer, length);
+	message[length+4] = dataBCC;
+	message[length+5] = FLAG;	
 	int j;
-	for(j = 0; j < n; j++){
-	}
+	int wrote = write(fd, message, length+6);
+	return wrote;
+	//todo ARQ
 }
 
 int llopen(int port, int mode){
