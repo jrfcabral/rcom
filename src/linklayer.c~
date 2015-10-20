@@ -1,39 +1,6 @@
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <strings.h>
-#include <string.h>
-#include <signal.h>
-#include <unistd.h>
-
 #include "alarm.h"
+#include "linklayer.h"
 
-
-
-#define BAUDRATE B38400
-#define MAX_RESEND 3
-#define TIMEOUT 3
-#define FLAG 0x7E
-#define A_SEND 0x03
-#define A_RECEIVE 0x01
-#define C_UA 0x03
-#define C_SET 0x07
-#define SEND 0
-#define RECEIVE 1
-#define ESCAPE 0x10
-
-
-typedef enum {
-	WAIT_FLAG,
-	WAIT_A,
-	WAIT_C,
-	WAIT_BCC,
-	BCC_OK,
-	EXIT	
-} state;
 
 state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state ifFail){
 	state toGo;	
@@ -49,20 +16,22 @@ state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state
 	return toGo;
 }
 
-
 int main(int argc, char **argv){
-	/*char *arg = (char *) malloc(strlen(argv[1])*sizeof(char)+1);
-	  strcpy(arg, argv[1]);
-	  char *tok1, *tok2;
-	  tok1 = strtok(argv[1], "/");
-	  tok2 = strtok(NULL, "/");*/
-	if(argc != 2 /*|| (!strcmp(tok1, "dev") && !strncmp(tok2, "ttyS", 5))*/){
+	//strcpy(ll.port, argv[1]);
+	int mode = atoi(argv[2]);
+	if(argc != 3 ||( mode != SEND && mode != RECEIVE)) {
 		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 	}
-	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
+
+	ll.timeOut = 10;
+	ll.sequenceNumber = 0;
+	ll.numTransmissions  = 3;
+//	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
+	char buffer[] = {0, 0, 1, 1, 1,FLAG,2,3};
 	char* stuffedBuffer;
+	char* unstuffedBuffer;
 	int r = byteStuffing(buffer, 5, &stuffedBuffer);
-	//llopen(0, RECEIVE);
+	int j = byteDestuffing(stuffedBuffer, r, &unstuffedBuffer);
 }
 
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
@@ -70,35 +39,109 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 	*stuffedBuffer = (char*) malloc(1);
 	int newLength = 0;
 	for(n = 0; n < length; n++){	
-		switch(buffer[n]){
-			case FLAG:				
-				newLength +=2;
-				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
-				stuffedBuffer[0][newLength-2] = ESCAPE;
-				stuffedBuffer[0][newLength-1] = FLAG;
-				write(STDOUT_FILENO, *stuffedBuffer, newLength);
-				break;
-			case ESCAPE:
-				newLength +=2;
-				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
-				stuffedBuffer[0][newLength-2] = ESCAPE;
-				stuffedBuffer[0][newLength-1] = ESCAPE;
-				write(STDOUT_FILENO, *stuffedBuffer, newLength);
-				break;
-			default:
-				newLength++;
-				*stuffedBuffer = realloc(*stuffedBuffer, newLength);
-				stuffedBuffer[0][newLength-1] = buffer[n];
-				break;
+		if (buffer[n] == FLAG || buffer[n] == ESCAPE){
+			newLength+=2;
+			*stuffedBuffer = realloc(*stuffedBuffer, newLength);
+			stuffedBuffer[0][newLength-2]=ESCAPE;
+			stuffedBuffer[0][newLength-1]= buffer[n]^0x20;
+		}
+		else{
+			*stuffedBuffer = realloc(*stuffedBuffer, ++newLength);
+			stuffedBuffer[0][newLength-1] = buffer[n];
 		}
 	}
+	write(STDOUT_FILENO, *stuffedBuffer, newLength);
+	
 	return newLength;
 
 }
 
-int llwrite(int fd, char* buffer, int length){
+int byteDestuffing(const char* stuffedBuffer, const int length, char** buffer){
+	int n = 0;
+	*buffer = (char*) malloc(1);	
+
+	int i;
+	for(i = 0; i < length; i++){
+		char current = stuffedBuffer[i];
+		n++;
+		*buffer = realloc(*buffer, n);
+		if(current == ESCAPE){
+			buffer[0][n] = stuffedBuffer[i+1]^0x20;
+			i++;
+		}
+		else
+			buffer[0][n] = stuffedBuffer[i];
+	}
 
 }
+
+char generateBCC(const char* buffer, const int length){
+	int i;
+	char bcc = 0;
+	for(i = 0; i < length; i++)
+		bcc ^=buffer[i];
+	return bcc;
+}
+
+
+int llwrite(int fd, char* buffer, int length){
+	char dataBCC = generateBCC(buffer, length);
+	char *bufferStuffed;
+	char header[] = { FLAG, 0x03, (ll.sequenceNumber << 5), header[1]^header[2] };
+	int n= byteStuffing(buffer, &bufferStuffed, length);
+	char* message = (char*)  malloc(length+6);
+	memcpy(message, header, 4);
+	memcpy(message+4, buffer, length);
+	message[length+4] = dataBCC;
+	message[length+5] = FLAG;
+	int j;
+	int wrote = write(fd, message, length+6);
+	return wrote;
+	//todo ARQ
+}
+
+int llread(int fd, char *buffer){
+	if(!getHeader(fd))
+		return;
+}
+
+
+int getHeader(int fd){
+	unsigned char header[3], input;
+	int r = 0;
+
+	while(!r)
+		r = read(fd, &input, 1);
+	
+	if(input != FLAG)
+		return -1;
+
+	int i = 0;
+	for(i = 0; i < 3; i++){
+		r = read(fd, header[i], 1);
+		if(!r){
+			i--;
+			continue;
+		}
+		if(header[i] == FLAG){
+			i = -1;
+			continue;
+		}
+	}
+
+	while(!r)
+		r = read(fd, &input, 1);
+	
+	if(input != FLAG)
+		return -1;
+
+	if(header[2] == header[1]^header[0] && header[1] == A_SEND){
+		return (int) header[1];	
+	}
+	
+}
+
+
 
 int llopen(int port, int mode){
 
@@ -107,7 +150,6 @@ int llopen(int port, int mode){
 	int fd;
 
 	char fileName[15];
-	strcpy(ll.port, fileName);
 	fd = open(ll.port, O_RDWR|O_NOCTTY);
 	if(fd <0){
 		perror(fileName);
@@ -208,7 +250,8 @@ int llopen(int port, int mode){
 			exit(-1);
 		}
 
-send: ;		resend = 0;
+send: ;	
+      resend = 0;
       unsigned char SET[5] = {FLAG, A_SEND, C_SET, SET[1]^SET[2], FLAG};
       if(	write(fd, SET, 5) != 5)
 	      return -1;

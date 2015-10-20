@@ -1,6 +1,7 @@
 #include "alarm.h"
 #include "linklayer.h"
 
+
 state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state ifFail){
 	state toGo;	
 	if(expected == read){
@@ -16,7 +17,7 @@ state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state
 }
 
 int main(int argc, char **argv){
-	strcpy(ll.port, argv[1]);
+	//strcpy(ll.port, argv[1]);
 	int mode = atoi(argv[2]);
 	if(argc != 3 ||( mode != SEND && mode != RECEIVE)) {
 		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
@@ -50,6 +51,7 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 		}
 	}
 	write(STDOUT_FILENO, *stuffedBuffer, newLength);
+	
 	return newLength;
 
 }
@@ -91,12 +93,56 @@ int llwrite(int fd, char* buffer, int length){
 	memcpy(message, header, 4);
 	memcpy(message+4, buffer, length);
 	message[length+4] = dataBCC;
-	message[length+5] = FLAG;	
+	message[length+5] = FLAG;
 	int j;
 	int wrote = write(fd, message, length+6);
 	return wrote;
 	//todo ARQ
 }
+
+int llread(int fd, char *buffer){
+	while(!getHeader(fd))
+		;
+	
+}
+
+
+int getHeader(int fd){
+	unsigned char header[3], input;
+	int r = 0;
+
+	while(!r)
+		r = read(fd, &input, 1);
+	
+	if(input != FLAG)
+		return -1;
+
+	int i = 0;
+	for(i = 0; i < 3; i++){
+		r = read(fd, header[i], 1);
+		if(!r){
+			i--;
+			continue;
+		}
+		if(header[i] == FLAG){
+			i = -1;
+			continue;
+		}
+	}
+
+	while(!r)
+		r = read(fd, &input, 1);
+	
+	if(input != FLAG)
+		return -1;
+
+	if(header[2] == header[1]^header[0] && header[1] == A_SEND){
+		return (int) header[1];	
+	}
+	
+}
+
+
 
 int llopen(int port, int mode){
 
