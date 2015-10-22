@@ -28,9 +28,9 @@ int main(int argc, char **argv){
 	ll.numTransmissions  = 3;
 //	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
 //	char buffer[] = {0, 0, 1, 1, 1,FLAG,2,3};
-
+	char *bufferino = (char *) malloc(1);
 	int fd = llopen(0, mode);
-	llread(fd);
+	llread(fd, bufferino);
 	return 0;
 
 
@@ -160,7 +160,7 @@ int sendDisc(int fd){
 	
 }
 
-int waitforDisc(int fd){
+int waitForDisc(int fd){
 	int command = -1;
 	while(command != C_DISC){
 		command = getHeader(fd);
@@ -183,7 +183,7 @@ int waitforDisc(int fd){
 }
 
 int sendUA(int fd){
-	unsigned char UA[5] = {FLAG, A_SEND, C_UA, DISC[1]^DISC[2], FLAG};
+	unsigned char UA[] = {FLAG, A_SEND, C_UA, UA[1]^UA[2], FLAG};
 	int wrote = write(fd, UA, 5);
 	if(!wrote)
 		return -1;
@@ -216,7 +216,7 @@ int waitForUA(int fd){
 int llclose(int fd){
 	if(!sendDisc(fd))
 		return -1;
-	if(!waitForDisc){
+	if(!waitForDisc(fd)){
 		return -1;	
 	}
 	if(!waitForUA(fd))

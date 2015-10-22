@@ -87,4 +87,8 @@ int getHeader(int fd);
 int sendDisc(int fd);
 int waitForUA(int fd);
 int llopen(int port, int mode);
+int llclose(int fd);
+int sendUA(int fd);
+int waitForDisc(int fd);
+int llread(int fd, char *buffer);
 
