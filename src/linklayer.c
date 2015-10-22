@@ -28,12 +28,18 @@ int main(int argc, char **argv){
 	ll.numTransmissions  = 3;
 //	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
 //	char buffer[] = {0, 0, 1, 1, 1,FLAG,2,3};
+
 	int fd = llopen(0, mode);
 	if(mode == SEND){
 		char message[] = "uma bela mensagem";
 		llwrite(fd, message, strlen(message));	
 	}
 
+	else if (mode == RECEIVE){
+	char *bufferino = (char *) malloc(1);
+	int fd = llopen(0, mode);
+	llread(fd, bufferino);
+	}
 	return 0;
 
 
@@ -117,7 +123,7 @@ int llread(int fd, char *buffer){
 			return -1;
 	}
 		
-	
+	printf("received: %d\nXAUZESCO\n", command);
 }
 
 
@@ -138,14 +144,15 @@ int getHeader(int fd){
 			i--;
 			continue;
 		}
+		printf("read: %x\n", header[i]);
 		if(header[i] == FLAG){
 			i = -1;
 			continue;
 		}
 	}
-
+	r = 0;
 	while(!r)
-		r = read(fd, &header[2], 1);
+		r = read(fd, (header+2), 1);
 
 	if(header[2] == (header[1]^header[0])){
 		return (int) header[1];	
@@ -162,9 +169,9 @@ int sendDisc(int fd){
 	
 }
 
-int waitForUA(int fd){
+int waitForDisc(int fd){
 	int command = -1;
-	while(command == -1){
+	while(command != C_DISC){
 		command = getHeader(fd);
 		if(command == -1)
 			continue;
@@ -184,6 +191,47 @@ int waitForUA(int fd){
 	return 0;
 }
 
+int sendUA(int fd){
+	unsigned char UA[] = {FLAG, A_SEND, C_UA, UA[1]^UA[2], FLAG};
+	int wrote = write(fd, UA, 5);
+	if(!wrote)
+		return -1;
+	return 1;
+}
+
+int waitForUA(int fd){
+	int command = -1;
+	while(command != C_UA){
+		command = getHeader(fd);
+		if(command == -1)
+			continue;
+		unsigned char in;
+		int n = 0;
+		while(!n)
+			n = read(fd, &in, 1);
+			
+		if(in == FLAG){
+			return 1;
+		}
+		else{
+			command = -1;
+			continue;		
+		}
+	}
+	return 0;
+}
+
+
+int llclose(int fd){
+	if(!sendDisc(fd))
+		return -1;
+	if(!waitForDisc(fd)){
+		return -1;	
+	}
+	if(!waitForUA(fd))
+		return -1;
+	return 1;
+}
 
 int llopen(int port, int mode){
 
