@@ -32,6 +32,7 @@ The link layer is the group of methods and communications protocols that only op
 #define A_RECEIVE 0x01
 #define C_UA 0x03
 #define C_SET 0x07
+#define C_DISC 0x0B
 #define SEND 0
 #define RECEIVE 1
 #define ESCAPE 0x10

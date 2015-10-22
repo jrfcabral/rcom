@@ -101,8 +101,18 @@ int llwrite(int fd, char* buffer, int length){
 }
 
 int llread(int fd, char *buffer){
-	while(!getHeader(fd))
-		;
+	int command = -1;
+	while(command == -1){
+		command = getHeader(fd);
+	}
+	
+	if(command == C_DISC){
+		if(!sendDisc(fd))
+			return -1;
+		if(!waitForUA(fd))
+			return -1;
+	}
+		
 	
 }
 
@@ -142,6 +152,32 @@ int getHeader(int fd){
 	
 }
 
+int sendDisc(int fd){
+	unsigned char DISC[5] = {FLAG, A_SEND, C_DISC, DISC[1]^DISC[2], FLAG};
+	int wrote = write(fd, DISC, 5);
+	if(!wrote)
+		return -1;
+	return 1;
+	
+}
+
+int waitForUA(int fd){
+	int command = -1;
+	while(command == -1){
+		command = getHeader(fd);
+		if(command == -1)
+			continue;
+		unsigned char in;
+		int n = read(fd, &in, 1);
+		if(in == FLAG){
+			return 1;
+		}
+		else{
+			command = -1;
+			continue;		
+		}
+	}
+}
 
 
 int llopen(int port, int mode){
