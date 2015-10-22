@@ -27,11 +27,11 @@ int main(int argc, char **argv){
 	ll.sequenceNumber = 0;
 	ll.numTransmissions  = 3;
 //	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
-	char buffer[] = {0, 0, 1, 1, 1,FLAG,2,3};
-	char* stuffedBuffer;
-	char* unstuffedBuffer;
-	int r = byteStuffing(buffer, 5, &stuffedBuffer);
-	int j = byteDestuffing(stuffedBuffer, r, &unstuffedBuffer);
+//	char buffer[] = {0, 0, 1, 1, 1,FLAG,2,3};
+
+	return 0;
+
+
 }
 
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
@@ -72,7 +72,7 @@ int byteDestuffing(const char* stuffedBuffer, const int length, char** buffer){
 		else
 			buffer[0][n] = stuffedBuffer[i];
 	}
-
+	return n;
 }
 
 char generateBCC(const char* buffer, const int length){
@@ -88,13 +88,12 @@ int llwrite(int fd, char* buffer, int length){
 	char dataBCC = generateBCC(buffer, length);
 	char *bufferStuffed;
 	char header[] = { FLAG, 0x03, (ll.sequenceNumber << 5), header[1]^header[2] };
-	int n= byteStuffing(buffer, &bufferStuffed, length);
-	char* message = (char*)  malloc(length+6);
+	int n= byteStuffing(buffer,  length, &bufferStuffed	);
+	char* message = (char*)  malloc(n+6);
 	memcpy(message, header, 4);
-	memcpy(message+4, buffer, length);
+	memcpy(message+4, bufferStuffed, n);
 	message[length+4] = dataBCC;
 	message[length+5] = FLAG;
-	int j;
 	int wrote = write(fd, message, length+6);
 	return wrote;
 	//todo ARQ
@@ -128,8 +127,8 @@ int getHeader(int fd){
 		return -1;
 
 	int i = 0;
-	for(i = 0; i < 3; i++){
-		r = read(fd, header[i], 1);
+	for(i = 0; i < 2; i++){
+		r = read(fd, (header+i), 1);
 		if(!r){
 			i--;
 			continue;
@@ -141,15 +140,12 @@ int getHeader(int fd){
 	}
 
 	while(!r)
-		r = read(fd, &input, 1);
-	
-	if(input != FLAG)
-		return -1;
+		r = read(fd, &header[2], 1);
 
-	if(header[2] == header[1]^header[0] && header[1] == A_SEND){
+	if(header[2] == (header[1]^header[0])){
 		return (int) header[1];	
 	}
-	
+	return -1;
 }
 
 int sendDisc(int fd){
@@ -168,7 +164,10 @@ int waitForUA(int fd){
 		if(command == -1)
 			continue;
 		unsigned char in;
-		int n = read(fd, &in, 1);
+		int n = 0;
+		while(!n)
+			n = read(fd, &in, 1);
+			
 		if(in == FLAG){
 			return 1;
 		}
@@ -177,6 +176,7 @@ int waitForUA(int fd){
 			continue;		
 		}
 	}
+	return 0;
 }
 
 
@@ -254,7 +254,7 @@ int llopen(int port, int mode){
 					currentState = verifyByte(C_SET, in, WAIT_BCC, WAIT_FLAG);                   
 					break;
 				case WAIT_BCC: 
-					currentState = verifyByte(0x04, in, BCC_OK, WAIT_FLAG);                 
+					currentState = verifyByte(correctBcc, in, BCC_OK, WAIT_FLAG);                 
 					break;
 
 				case BCC_OK:
