@@ -28,8 +28,11 @@ int main(int argc, char **argv){
 	ll.numTransmissions  = 3;
 //	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
 //	char buffer[] = {0, 0, 1, 1, 1,FLAG,2,3};
-
 	int fd = llopen(0, mode);
+	if(mode == SEND){
+		char message[] = "uma bela mensagem";
+		llwrite(fd, message, strlen(message));	
+	}
 
 	return 0;
 
