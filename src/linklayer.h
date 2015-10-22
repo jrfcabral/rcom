@@ -86,4 +86,5 @@ int byteDestuffing(const char* stuffedBuffer, const int length, char** buffer);
 int getHeader(int fd);
 int sendDisc(int fd);
 int waitForUA(int fd);
+int llopen(int port, int mode);
 

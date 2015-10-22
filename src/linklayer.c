@@ -12,12 +12,12 @@ state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state
 	}
 	else{
 		toGo = (state) ifFail;
-	}
+	}	
 	return toGo;
 }
 
 int main(int argc, char **argv){
-	//strcpy(ll.port, argv[1]);
+	strcpy(ll.port, argv[1]);
 	int mode = atoi(argv[2]);
 	if(argc != 3 ||( mode != SEND && mode != RECEIVE)) {
 		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
@@ -28,6 +28,8 @@ int main(int argc, char **argv){
 	ll.numTransmissions  = 3;
 //	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
 //	char buffer[] = {0, 0, 1, 1, 1,FLAG,2,3};
+
+	int fd = llopen(0, mode);
 
 	return 0;
 
@@ -229,17 +231,12 @@ int llopen(int port, int mode){
 		printf("Ready to read\n");
 		state currentState = WAIT_FLAG;
 		printf("%d\n", currentState);
-		char buf[255];
-		int n = 0;
 		while(currentState != EXIT){
 			unsigned char in;
 
 			int l = read(fd, &in, 1);
-			char correctBcc;
 			if (!l)
-				continue;
-			if(n >= 2)
-				correctBcc = buf[1]^buf[2];
+				continue;		
 
 			printf("read: %x\n", in);			
 
@@ -254,7 +251,7 @@ int llopen(int port, int mode){
 					currentState = verifyByte(C_SET, in, WAIT_BCC, WAIT_FLAG);                   
 					break;
 				case WAIT_BCC: 
-					currentState = verifyByte(correctBcc, in, BCC_OK, WAIT_FLAG);                 
+					currentState = verifyByte(A_SEND^C_SET, in, BCC_OK, WAIT_FLAG);                 
 					break;
 
 				case BCC_OK:
