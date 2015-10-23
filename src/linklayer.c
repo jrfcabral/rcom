@@ -6,12 +6,15 @@ state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state
 	state toGo;	
 	if(expected == read){
 		toGo = (state) ifSucc;
+		printf("Sucesso, vou pro estado %d\n", toGo);
 	}
 	else if(read == FLAG){
 		toGo = WAIT_A;
+		printf("Flag, vou pro estado %d\n", toGo);
 	}
 	else{
 		toGo = ifFail;
+		printf("Falhanço, vou pro estado %d\n", toGo);
 	}	
 	return toGo;
 }
@@ -366,12 +369,15 @@ int llopen(int port, int mode){
 		}
 
 		printf("Ready to read\n");
-		state currentState = WAIT_FLAG;
-		printf("%d\n", currentState);
-		waitForByteUgly(fd, C_SET);		
-		printf("Received SET frame\n");
-		unsigned char UA[5] = {FLAG, A_SEND, C_UA, UA[1]^UA[2], FLAG};
-		write(fd, UA, 5);
+
+		int ret = waitForByteUgly(fd, C_SET);
+		if(ret == 1){
+			printf("Received SET frame\n");
+			unsigned char UA[5] = {FLAG, A_SEND, C_UA, UA[1]^UA[2], FLAG};
+			write(fd, UA, 5);
+		}
+		
+
 
 
 	}
