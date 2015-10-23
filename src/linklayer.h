@@ -84,13 +84,11 @@ LinkLayer ll;
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer);
 int byteDestuffing(const char* stuffedBuffer, const int length, char** buffer);
 int getHeader(int fd);
-int sendDisc(int fd);
-int waitForUA(int fd);
 int llopen(int port, int mode);
 int llwrite(int fd, char* buffer, int length);
 int llclose(int fd);
-int sendUA(int fd);
-int waitForDisc(int fd);
 int llread(int fd, char *buffer);
 int waitForByte(int fd, char expectedCommand);
+int sendByte(int fd, char byte);
+int readData(int fd, char** buffer);
 

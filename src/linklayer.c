@@ -128,7 +128,7 @@ int llread(int fd, char *buffer){
 		printf("read what should be the flag and it was 0x%02x\n", flag);
 		if (flag != FLAG)
 			return -1;
-		if(!sendDisc(fd))
+		if(!sendByte(fd, C_DISC))
 			return -1;
 		if(!waitForByte(fd, C_UA))
 			return -1;
@@ -214,7 +214,7 @@ int getHeader(int fd){
 }
 
 int sendByte(int fd, char byte){
-	unsigned char FRAME[5] = {FLAG, A_SEND, byte, DISC[1]^DISC[2], FLAG};
+	unsigned char FRAME[5] = {FLAG, A_SEND, byte, FRAME[1]^FRAME[2], FLAG};
 	int wrote = write(fd, FRAME, 5);
 	if(!wrote)
 		return -1;
@@ -246,12 +246,12 @@ int waitForByte(int fd, char expectedCommand){
 }
 
 int llclose(int fd){
-	if(!sendDisc(fd))
+	if(!sendByte(fd, C_DISC))
 		return -1;
 	if(!waitForByte(fd, C_DISC)){
 		return -1;	
 	}
-	if(!sendUA(fd))
+	if(!sendByte(fd, C_UA))
 		return -1;
 	return 1;
 }
