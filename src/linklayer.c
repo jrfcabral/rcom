@@ -33,14 +33,14 @@ int main(int argc, char **argv){
 	int fd = llopen(0, mode);
 	if(mode == SEND){
 
-		char message[] = "uma bela mensagem";
-		//llwrite(fd, message, strlen(message));
-		llclose(fd);	
+		char message[] = "Uma bela~ mensag~em cheia de ~til~es";
+		llwrite(fd, message, strlen(message));
+		//llclose(fd);	
 	}
 
 	else if (mode == RECEIVE){
 	char *bufferino = (char *) malloc(1);
-
+	
 	llread(fd, bufferino);
 	}
 	return 0;
@@ -70,23 +70,18 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 
 }
 
-int byteDestuffing(const char* stuffedBuffer, const int length, char** buffer){
-	int n = 0;
-	*buffer = (char*) malloc(1);	
 
+int byteDeStuffing(unsigned char** buf, int length) {
 	int i;
-	for(i = 0; i < length; i++){
-		char current = stuffedBuffer[i];
-		n++;
-		*buffer = realloc(*buffer, n);
-		if(current == ESCAPE){
-			buffer[0][n] = stuffedBuffer[i+1]^0x20;
-			i++;
+	for (i = 0; i < length; ++i) {
+		if ((*buf)[i] == ESCAPE) {
+			memmove(*buf + i, *buf + i + 1, length - i - 1);
+			length--;
+			(*buf)[i] ^= 0x20;
 		}
-		else
-			buffer[0][n] = stuffedBuffer[i];
 	}
-	return n;
+	*buf = (unsigned char*) realloc(*buf, length);
+	return length;
 }
 
 char generateBCC(const char* buffer, const int length){
@@ -106,9 +101,9 @@ int llwrite(int fd, char* buffer, int length){
 	char* message = (char*)  malloc(n+6);
 	memcpy(message, header, 4);
 	memcpy(message+4, bufferStuffed, n);
-	message[length+4] = dataBCC;
-	message[length+5] = FLAG;
-	int wrote = write(fd, message, length+6);
+	message[n+4] = dataBCC;
+	message[n+5] = FLAG;
+	int wrote = write(fd, message, n+6);
 	return wrote;
 	//todo ARQ
 }
@@ -138,11 +133,37 @@ int llread(int fd, char *buffer){
 	
 	//read data
 	char* data;
-	readData(fd, &data);
-		
+	int stuffedlength = readData(fd, &data);
+	int destuffedlength = byteDeStuffing(&data, stuffedlength);
 	
-		
+	int j;
+	for(j=0; j < destuffedlength; j++){
+		printf("destuffing: 0x%02x, ASCII: %c\n", data[j], data[j]);
+	}
+	
+	int bccOK = verifyBCC(data, destuffedlength-1, data[destuffedlength-2]);
 
+
+
+
+	free(data);
+
+
+}
+
+int verifyBCC(char* data, int datalength, char correctBCC){
+	char actualBCC = 0;
+	int i;
+	for(i=0;i<datalength-1;i++){
+		actualBCC ^= data[i];
+		printf("%d, 0x%02x\n", i, actualBCC);
+	}
+		
+	if (actualBCC != correctBCC){
+		printf("calculated BCC to be 0x%02x, expected it to be 0x%02x\n", actualBCC, correctBCC);
+	}
+		
+	return actualBCC == correctBCC;
 }
 
 int readData(int fd, char** buffer){
@@ -162,7 +183,7 @@ int readData(int fd, char** buffer){
 		
 		*buffer = realloc(*buffer, ++length);
 		(*buffer)[length-1] = in; 
-		printf("ReadData read 0x%02x\n", in);		
+		printf("ReadData read 0x%02x, ASCII: %c\n", in, in);		
 		
 		if (!escaped && in == ESCAPE){
 			escaped = 1;

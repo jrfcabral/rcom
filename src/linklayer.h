@@ -82,7 +82,7 @@ LinkLayer ll;
 
 //declarations
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer);
-int byteDestuffing(const char* stuffedBuffer, const int length, char** buffer);
+int byteDeStuffing(unsigned char** buf, int length);
 int getHeader(int fd);
 int sendDisc(int fd);
 int waitForUA(int fd);
@@ -93,4 +93,5 @@ int sendUA(int fd);
 int waitForDisc(int fd);
 int llread(int fd, char *buffer);
 int waitForByte(int fd, char expectedCommand);
+int verifyBCC(char* data, int datalength, char correctBCC);
 
