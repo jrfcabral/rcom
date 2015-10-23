@@ -246,26 +246,29 @@ int waitForByte(int fd, char expectedCommand){
 }
 
 int waitForByteUgly(int fd, char expectedCommand){
-	switch(currentState){
-		case WAIT_FLAG:
-			currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
-			break;
-		case WAIT_A:
-			currentState = verifyByte(A_SEND, in, WAIT_C, WAIT_FLAG);                 
-			break;
-		case WAIT_C:
-			currentState = verifyByte(expectedCommand, in, WAIT_BCC, WAIT_FLAG);                   
-			break;
-		case WAIT_BCC: 
-			currentState = verifyByte(A_SEND^expectedCommand, in, BCC_OK, WAIT_FLAG);                 
-			break;
-		case BCC_OK:
-			currentState = verifyByte(FLAG, in, EXIT, WAIT_FLAG);                 
-			break;
-		default:
-			perror("Something very strange happened\n");
-			exit(-3);
-			break;                        
+	state currentState = WAIT_FLAG;
+	while(currentState != EXIT){	
+		switch(currentState){
+			case WAIT_FLAG:
+				currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
+				break;
+			case WAIT_A:
+				currentState = verifyByte(A_SEND, in, WAIT_C, WAIT_FLAG);                 
+				break;
+			case WAIT_C:
+				currentState = verifyByte(expectedCommand, in, WAIT_BCC, WAIT_FLAG);                   
+				break;
+			case WAIT_BCC: 
+				currentState = verifyByte(A_SEND^expectedCommand, in, BCC_OK, WAIT_FLAG);                 
+				break;
+			case BCC_OK:
+				currentState = verifyByte(FLAG, in, EXIT, WAIT_FLAG);                 
+				break;
+			default:
+				perror("Something very strange happened\n");
+				exit(-3);
+				break;                        
+		}
 	}
 }
 
@@ -329,7 +332,9 @@ int llopen(int port, int mode){
 		printf("Ready to read\n");
 		state currentState = WAIT_FLAG;
 		printf("%d\n", currentState);
-		while(currentState != EXIT){
+		//waitForByte(fd, C_SET);
+		waitForByteUgly(fd, C_SET);
+		/*while(currentState != EXIT){
 			unsigned char in;
 
 			int l = read(fd, &in, 1);
@@ -338,9 +343,8 @@ int llopen(int port, int mode){
 
 			printf("read for: %x\n", in);			
 			
-			//waitForByte(fd, C_SET);
-			waitForByteUgly(fd, C_SET);
-			/*switch(currentState){
+			
+			switch(currentState){
 				case WAIT_FLAG:
 					currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
 					break;
@@ -362,9 +366,9 @@ int llopen(int port, int mode){
 					exit(-3);
 					break;                        
 
-			}*/
+			}
 
-		}
+		}*/
 		printf("Received SET frame\n");
 		unsigned char UA[5] = {FLAG, A_RECEIVE, C_UA, UA[1]^UA[2], FLAG};
 		write(fd, UA, 5);
@@ -392,7 +396,9 @@ send: ;
       printf("escrevi\n");	
       alarm(ll.timeOut);
       state currentState = WAIT_FLAG;
-      while(currentState != EXIT){
+	//waitForByte(fd, C_UA);
+	waitForByteUgly(fd, C_SET);
+      /*while(currentState != EXIT){
 
 	      unsigned char in;
 	      if(!read(fd, &in, 1)){
@@ -406,9 +412,7 @@ send: ;
 
 	      printf("%x\n", in);
 	      printf("Current state is %d\n", currentState);
-		//waitForByte(fd, C_UA);
-		waitForByteUgly(fd, C_SET);
-	      /*switch(currentState){
+	      switch(currentState){
 		      case WAIT_FLAG:
 			      currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
 			      break;
@@ -428,8 +432,8 @@ send: ;
 			      perror("Something very strange happened\n");
 			      return -1;
 			      break;                        
-	      }*/
-      }
+	      }
+      }*/
       alarm(0);
 	}
 
