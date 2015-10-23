@@ -213,12 +213,12 @@ int getHeader(int fd){
 	return -1;
 }
 
-int sendDisc(int fd){
-	unsigned char DISC[5] = {FLAG, A_SEND, C_DISC, DISC[1]^DISC[2], FLAG};
-	int wrote = write(fd, DISC, 5);
+int sendByte(int fd, char byte){
+	unsigned char FRAME[5] = {FLAG, A_SEND, byte, DISC[1]^DISC[2], FLAG};
+	int wrote = write(fd, FRAME, 5);
 	if(!wrote)
 		return -1;
-	puts("DISC sent");
+	puts("FRAME with command %02x sent\n");
 	return 1;
 	
 }
@@ -243,14 +243,6 @@ int waitForByte(int fd, char expectedCommand){
 		}
 	}
 	return 0;
-}
-
-int sendUA(int fd){
-	unsigned char UA[] = {FLAG, A_SEND, C_UA, UA[1]^UA[2], FLAG};
-	int wrote = write(fd, UA, 5);
-	if(!wrote)
-		return -1;
-	return 1;
 }
 
 int llclose(int fd){
