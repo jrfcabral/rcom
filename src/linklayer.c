@@ -17,6 +17,7 @@ state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state
 }
 
 int main(int argc, char **argv){
+
 	strcpy(ll.port, argv[1]);
 	int mode = atoi(argv[2]);
 	if(argc != 3 ||( mode != SEND && mode != RECEIVE)) {
@@ -31,13 +32,15 @@ int main(int argc, char **argv){
 
 	int fd = llopen(0, mode);
 	if(mode == SEND){
+
 		char message[] = "uma bela mensagem";
-		llwrite(fd, message, strlen(message));	
+		//llwrite(fd, message, strlen(message));
+		llclose(fd);	
 	}
 
 	else if (mode == RECEIVE){
 	char *bufferino = (char *) malloc(1);
-	int fd = llopen(0, mode);
+
 	llread(fd, bufferino);
 	}
 	return 0;
@@ -117,22 +120,72 @@ int llread(int fd, char *buffer){
 	}
 	
 	if(command == C_DISC){
+		char flag;
+		int l = 0;
+		printf("will now try to read the flag, god help me\n");
+		while(!l)
+			l = read(fd, &flag, 1);
+		printf("read what should be the flag and it was 0x%02x\n", flag);
+		if (flag != FLAG)
+			return -1;
 		if(!sendDisc(fd))
 			return -1;
-		if(!waitForUA(fd))
+		if(!waitForByte(fd, C_UA))
 			return -1;
+		printf("received: %d\nATE JAZZ\n", command);
+		return 1;
 	}
+	
+	//read data
+	char* data;
+	readData(fd, &data);
 		
-	printf("received: %d\nXAUZESCO\n", command);
+	
+		
+
+}
+
+int readData(int fd, char** buffer){
+	*buffer = malloc(1);
+	int length = 0;
+	int escaped = 0;
+	int done = 0;
+	
+	while(!done){
+		char in;
+		int n = 0;
+		while(!n)
+			n = read(fd, &in, 1);
+		
+		if (!escaped && in == FLAG)
+			done = 1;
+		
+		*buffer = realloc(*buffer, ++length);
+		(*buffer)[length-1] = in; 
+		printf("ReadData read 0x%02x\n", in);		
+		
+		if (!escaped && in == ESCAPE){
+			escaped = 1;
+			
+		}
+		
+		else if (escaped){
+			escaped = 0;
+		}
+	}
+	return length;	
+	
 }
 
 
 int getHeader(int fd){
 	unsigned char header[3], input;
 	int r = 0;
-
-	while(!r)
+	puts("getheader called");
+	while(r == 0){
 		r = read(fd, &input, 1);
+		printf("getHeader read 0x%02x\n", input);
+	}
 	
 	if(input != FLAG)
 		return -1;
@@ -146,7 +199,7 @@ int getHeader(int fd){
 		}
 		printf("read: %x\n", header[i]);
 		if(header[i] == FLAG){
-			i = -1;
+			i = -1; 
 			continue;
 		}
 	}
@@ -165,13 +218,14 @@ int sendDisc(int fd){
 	int wrote = write(fd, DISC, 5);
 	if(!wrote)
 		return -1;
+	puts("DISC sent");
 	return 1;
 	
 }
 
-int waitForDisc(int fd){
+int waitForByte(int fd, char expectedCommand){
 	int command = -1;
-	while(command != C_DISC){
+	while(command != expectedCommand){
 		command = getHeader(fd);
 		if(command == -1)
 			continue;
@@ -199,36 +253,13 @@ int sendUA(int fd){
 	return 1;
 }
 
-int waitForUA(int fd){
-	int command = -1;
-	while(command != C_UA){
-		command = getHeader(fd);
-		if(command == -1)
-			continue;
-		unsigned char in;
-		int n = 0;
-		while(!n)
-			n = read(fd, &in, 1);
-			
-		if(in == FLAG){
-			return 1;
-		}
-		else{
-			command = -1;
-			continue;		
-		}
-	}
-	return 0;
-}
-
-
 int llclose(int fd){
 	if(!sendDisc(fd))
 		return -1;
-	if(!waitForDisc(fd)){
+	if(!waitForByte(fd, C_DISC)){
 		return -1;	
 	}
-	if(!waitForUA(fd))
+	if(!sendUA(fd))
 		return -1;
 	return 1;
 }
@@ -289,7 +320,7 @@ int llopen(int port, int mode){
 			if (!l)
 				continue;		
 
-			printf("read: %x\n", in);			
+			printf("read for: %x\n", in);			
 
 			switch(currentState){
 				case WAIT_FLAG:

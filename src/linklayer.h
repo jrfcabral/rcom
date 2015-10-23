@@ -92,5 +92,5 @@ int llclose(int fd);
 int sendUA(int fd);
 int waitForDisc(int fd);
 int llread(int fd, char *buffer);
-
+int waitForByte(int fd, char expectedCommand);
 
