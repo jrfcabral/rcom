@@ -11,7 +11,7 @@ state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state
 		toGo = WAIT_A;
 	}
 	else{
-		toGo = (state) ifFail;
+		toGo = ifFail;
 	}	
 	return toGo;
 }
@@ -123,7 +123,7 @@ int llread(int fd, char *buffer){
 		printf("read what should be the flag and it was 0x%02x\n", flag);
 		if (flag != FLAG)
 			return -1;
-		if(!sendDisc(fd))
+		if(!sendByte(fd, A_SEND, C_DISC))
 			return -1;
 		if(!waitForByte(fd, C_UA))
 			return -1;
@@ -234,12 +234,12 @@ int getHeader(int fd){
 	return -1;
 }
 
-int sendDisc(int fd){
-	unsigned char DISC[5] = {FLAG, A_SEND, C_DISC, DISC[1]^DISC[2], FLAG};
-	int wrote = write(fd, DISC, 5);
+int sendByte(int fd, char address, char command){
+	unsigned char FRAME[5] = {FLAG, address, command, FRAME[1]^FRAME[2], FLAG};
+	int wrote = write(fd, FRAME, 5);
 	if(!wrote)
 		return -1;
-	puts("DISC sent");
+	puts("FRAME with command %02x sent\n");
 	return 1;
 	
 }
@@ -266,21 +266,55 @@ int waitForByte(int fd, char expectedCommand){
 	return 0;
 }
 
-int sendUA(int fd){
-	unsigned char UA[] = {FLAG, A_SEND, C_UA, UA[1]^UA[2], FLAG};
-	int wrote = write(fd, UA, 5);
-	if(!wrote)
-		return -1;
+int waitForByteUgly(int fd, char expectedCommand){
+	state currentState = WAIT_FLAG;
+	while(currentState != EXIT){
+		unsigned char in;
+	      if(!read(fd, &in, 1)){
+	      	if(resend){
+	      		resend = 0;
+	      		return E_TIMEOUT;
+	      	}
+	      	else if (abort_send){
+	      		abort_send = 0;
+	      		return E_ABORT;
+	      	}
+			
+	      	continue;
+	      }
+	      	
+		switch(currentState){
+			case WAIT_FLAG:
+				currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
+				break;
+			case WAIT_A:
+				currentState = verifyByte(A_SEND, in, WAIT_C, WAIT_FLAG);                 
+				break;
+			case WAIT_C:
+				currentState = verifyByte(expectedCommand, in, WAIT_BCC, WAIT_FLAG);                   
+				break;
+			case WAIT_BCC: 
+				currentState = verifyByte(A_SEND^expectedCommand, in, BCC_OK, WAIT_FLAG);                 
+				break;
+			case BCC_OK:
+				currentState = verifyByte(FLAG, in, EXIT, WAIT_FLAG);                 
+				break;
+			default:
+				perror("Something very strange happened\n");
+				exit(-3);
+				break;                        
+		}
+	}
 	return 1;
 }
 
 int llclose(int fd){
-	if(!sendDisc(fd))
+	if(!sendByte(fd, A_SEND, C_DISC))
 		return -1;
 	if(!waitForByte(fd, C_DISC)){
 		return -1;	
 	}
-	if(!sendUA(fd))
+	if(!sendByte(fd, A_RECEIVE, C_UA))
 		return -1;
 	return 1;
 }
@@ -334,7 +368,9 @@ int llopen(int port, int mode){
 		printf("Ready to read\n");
 		state currentState = WAIT_FLAG;
 		printf("%d\n", currentState);
-		while(currentState != EXIT){
+		//waitForByte(fd, C_SET);
+		waitForByteUgly(fd, C_SET);
+		/*while(currentState != EXIT){
 			unsigned char in;
 
 			int l = read(fd, &in, 1);
@@ -342,7 +378,8 @@ int llopen(int port, int mode){
 				continue;		
 
 			printf("read for: %x\n", in);			
-
+			
+			
 			switch(currentState){
 				case WAIT_FLAG:
 					currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
@@ -367,7 +404,7 @@ int llopen(int port, int mode){
 
 			}
 
-		}
+		}*/
 		printf("Received SET frame\n");
 		unsigned char UA[5] = {FLAG, A_RECEIVE, C_UA, UA[1]^UA[2], FLAG};
 		write(fd, UA, 5);
@@ -388,50 +425,22 @@ int llopen(int port, int mode){
 		}
 
 send: ;	
-      resend = 0;
-      unsigned char SET[5] = {FLAG, A_SEND, C_SET, SET[1]^SET[2], FLAG};
-      if(	write(fd, SET, 5) != 5)
+	resend = 0;
+	unsigned char SET[5] = {FLAG, A_SEND, C_SET, SET[1]^SET[2], FLAG};
+	if(write(fd, SET, 5) != 5)
 	      return -1;
-      printf("escrevi\n");	
-      alarm(ll.timeOut);
-      state currentState = WAIT_FLAG;
-      while(currentState != EXIT){
+	printf("escrevi\n");	
+	alarm(ll.timeOut);
+	state currentState = WAIT_FLAG;
+	int ret = waitForByteUgly(fd, C_UA);
+	if (ret == E_TIMEOUT)
+		goto send;
+	else if (ret == E_ABORT)
+		return -1;
+	
 
-	      unsigned char in;
-	      if(!read(fd, &in, 1)){
-		      printf("Tou aqui\n");
-		      if(resend)
-			      goto send;
-		      else if (abort_send)
-			      return -1;
-		      continue;
-	      }
-
-	      printf("%x\n", in);
-	      printf("Current state is %d\n", currentState);
-
-	      switch(currentState){
-		      case WAIT_FLAG:
-			      currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
-			      break;
-		      case WAIT_A:
-			      currentState = verifyByte(A_RECEIVE, in, WAIT_C, WAIT_FLAG);                 	
-			      break;
-		      case WAIT_C:
-			      currentState = verifyByte(C_UA, in, WAIT_BCC, WAIT_FLAG);                   
-			      break;
-		      case WAIT_BCC: 
-			      currentState = verifyByte(A_RECEIVE^C_UA, in, BCC_OK, WAIT_FLAG);                 
-			      break;                   
-		      case BCC_OK:
-			      currentState = verifyByte(FLAG, in, EXIT, WAIT_FLAG);                 
-			      break;
-		      default:
-			      perror("Something very strange happened\n");
-			      return -1;
-			      break;                        
-	      }
-      }
+	
+	
       alarm(0);
 	}
 
