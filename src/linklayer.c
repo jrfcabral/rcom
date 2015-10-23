@@ -6,12 +6,15 @@ state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state
 	state toGo;	
 	if(expected == read){
 		toGo = (state) ifSucc;
+		printf("Sucesso, vou pro estado %d\n", toGo);
 	}
 	else if(read == FLAG){
 		toGo = WAIT_A;
+		printf("Flag, vou pro estado %d\n", toGo);
 	}
 	else{
 		toGo = ifFail;
+		printf("Falhanço, vou pro estado %d\n", toGo);
 	}	
 	return toGo;
 }
@@ -366,48 +369,14 @@ int llopen(int port, int mode){
 		}
 
 		printf("Ready to read\n");
-		state currentState = WAIT_FLAG;
-		printf("%d\n", currentState);
-		//waitForByte(fd, C_SET);
-		waitForByteUgly(fd, C_SET);
-		/*while(currentState != EXIT){
-			unsigned char in;
-
-			int l = read(fd, &in, 1);
-			if (!l)
-				continue;		
-
-			printf("read for: %x\n", in);			
-			
-			
-			switch(currentState){
-				case WAIT_FLAG:
-					currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
-					break;
-				case WAIT_A:
-					currentState = verifyByte(A_SEND, in, WAIT_C, WAIT_FLAG);                 
-					break;
-				case WAIT_C:
-					currentState = verifyByte(C_SET, in, WAIT_BCC, WAIT_FLAG);                   
-					break;
-				case WAIT_BCC: 
-					currentState = verifyByte(A_SEND^C_SET, in, BCC_OK, WAIT_FLAG);                 
-					break;
-
-				case BCC_OK:
-					currentState = verifyByte(FLAG, in, EXIT, WAIT_FLAG);                 
-					break;
-				default:
-					perror("Something very strange happened\n");
-					exit(-3);
-					break;                        
-
-			}
-
-		}*/
-		printf("Received SET frame\n");
-		unsigned char UA[5] = {FLAG, A_RECEIVE, C_UA, UA[1]^UA[2], FLAG};
-		write(fd, UA, 5);
+		
+		int ret = waitForByteUgly(fd, C_SET);
+		if(ret == 1){
+			printf("Received SET frame\n");
+			unsigned char UA[5] = {FLAG, A_RECEIVE, C_UA, UA[1]^UA[2], FLAG};
+			write(fd, UA, 5);
+		}
+		
 
 
 	}
