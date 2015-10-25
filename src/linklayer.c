@@ -199,73 +199,6 @@ int verifyBCC(unsigned char* data, int datalength, char correctBCC){
 	return actualBCC == correctBCC;
 }
 
-int readData(int fd, char** buffer){
-	*buffer = malloc(1);
-	int length = 0;
-	int escaped = 0;
-	int done = 0;
-
-	while(!done){
-		char in;
-		int n = 0;
-		while(!n)
-			n = read(fd, &in, 1);
-
-		if (!escaped && in == FLAG)
-			done = 1;
-
-		*buffer = realloc(*buffer, ++length);
-		(*buffer)[length-1] = in;
-		printf("ReadData read 0x%02x, ASCII: %c\n", in, in);
-
-		if (!escaped && in == ESCAPE){
-			escaped = 1;
-
-		}
-
-		else if (escaped){
-			escaped = 0;
-		}
-	}
-	return length;
-
-}
-
-
-int getHeader(int fd){
-	unsigned char header[3], input;
-	int r = 0;
-	puts("getheader called\n");
-	while(r == 0){
-		r = read(fd, &input, 1);
-		printf("getHeader read 0x%02x\n", input);
-	}
-
-	if(input != FLAG)
-		return -1;
-
-	int i = 0;
-	for(i = 0; i < 2; i++){
-		r = read(fd, (header+i), 1);
-		if(!r){
-			i--;
-			continue;
-		}
-		printf("read: %x\n", header[i]);
-		if(header[i] == FLAG){
-			i = -1;
-			continue;
-		}
-	}
-	r = 0;
-	while(!r)
-		r = read(fd, (header+2), 1);
-
-	if(header[2] == (header[1]^header[0])){
-		return (int) header[1];
-	}
-	return -1;
-}
 
 int sendByte(int fd, char address, char command){
 	unsigned char FRAME[5] = {FLAG, address, command, FRAME[1]^FRAME[2], FLAG};
@@ -277,27 +210,7 @@ int sendByte(int fd, char address, char command){
 
 }
 
-int waitForByte(int fd, char expectedCommand){
-	int command = -1;
-	while(command != expectedCommand){
-		command = getHeader(fd);
-		if(command == -1)
-			continue;
-		unsigned char in;
-		int n = 0;
-		while(!n)
-			n = read(fd, &in, 1);
 
-		if(in == FLAG){
-			return 1;
-		}
-		else{
-			command = -1;
-			continue;
-		}
-	}
-	return 0;
-}
 
 Command receiveCommand(int fd){
 	state currentState = WAIT_FLAG;
@@ -393,7 +306,9 @@ Command receiveCommand(int fd){
 int llclose(int fd){
 	if(!sendByte(fd, A_SEND, C_DISC))
 		return -1;
-	if(!waitForByte(fd, C_DISC)){
+
+	Command command = receiveCommand(fd);
+	if(command.command != DISC){
 		return -1;
 	}
 	if(!sendByte(fd, A_RECEIVE, C_UA))

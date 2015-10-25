@@ -108,13 +108,10 @@ LinkLayer ll;
 //declarations
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer);
 int byteDeStuffing(unsigned char** buf, int length);
-int getHeader(int fd);
 int llopen(int port, int mode);
 int llwrite(int fd, char* buffer, int length);
 int llclose(int fd);
 int llread(int fd, char *buffer);
-int waitForByte(int fd, char expectedCommand);
 int verifyBCC(unsigned char* data, int datalength, char correctBCC);
 int sendByte(int fd, char, char );
-int readData(int fd, char** buffer);
 Command receiveCommand(int fd);
