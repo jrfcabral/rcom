@@ -83,17 +83,38 @@ char generateBCC(const char* buffer, const int length){
 int llwrite(int fd, char* buffer, int length){
 	char dataBCC = generateBCC(buffer, length);
 	char *bufferStuffed;
-	char header[] = { FLAG, 0x03, (ll.sequenceNumber << 5), header[1]^header[2] };
+	char header[] = { FLAG, 0x03, I(ll.sequenceNumber), header[1]^header[2] };
 	int n= byteStuffing(buffer,  length, &bufferStuffed	);
 	char* message = (char*)  malloc(n+6);
 	memcpy(message, header, 4);
 	memcpy(message+4, bufferStuffed, n);
 	message[n+4] = dataBCC;
 	message[n+5] = FLAG;
-	int wrote = write(fd, message, n+6);
-	puts("message sent");
-	return wrote;
-	//todo ARQ
+	int wrote = 0;
+	while(!wrote)
+		wrote = write(fd, message, n+6);
+
+
+	puts("message sent\n");
+
+	free(message);
+	free(bufferStuffed);
+
+	Command command = receiveCommand(fd);
+	//was asked for new frame
+	if (command.command == RR(!ll.sequenceNumber)){
+		ll.sequenceNumber = (!ll.sequenceNumber);
+		return length;
+	}
+	//frame was rejected, resend
+	if (command.command == REJ(ll.sequenceNumber)){
+		puts("byte was rejected,resending\n");
+		return llwrite(fd, buffer, length);
+	}
+	else
+		puts("llwrite: received unexpected response\n");
+
+	return length;
 }
 
 int llread(int fd, char *buffer){
@@ -131,21 +152,29 @@ int llread(int fd, char *buffer){
 			//Reject frames with wrong BCC
 			if(!bccOK){
 				puts("llread: frame was damaged, rejecting and rereading\n");
-				while(!sendByte(fd, REJ(ll.sequenceNumber), 0x03)){}
+				while(!sendByte(fd, 0x03, REJ(ll.sequenceNumber) )){}
 					return llread(fd, buffer);
 			}
 
 			//accept the frame and confirm it
 			puts("llread: frame bcc ok, accepting\n");
+			buffer = (char*) malloc(length);			
 			memcpy(buffer, command.data, length);
-			while(!sendByte(fd, RR(!ll.sequenceNumber),0x03)){}
+			while(!sendByte(fd,0x03, RR(!ll.sequenceNumber))){}
 			puts("llread: receiver ready sent, message confirmed\n");
 			ll.sequenceNumber = !ll.sequenceNumber;
 			return length;
 
 		}
-		puts("llread: message repeated");
+		//this frame is repeated. Confirm it and ask for the new frame
+		else{
+				puts("llread: message repeated");
+				while(!sendByte(fd, RR(ll.sequenceNumber),0x03)){}
+				return E_GENERIC;
+		}
+
 	}
+
 	else{
 		printf("received unexpected command 0x%02x\n",command.command);
 	}
@@ -153,7 +182,7 @@ int llread(int fd, char *buffer){
 
 }
 
-int verifyBCC(char* data, int datalength, char correctBCC){
+int verifyBCC(unsigned char* data, int datalength, char correctBCC){
 	char actualBCC = 0;
 	int i;
 	for(i=0;i<datalength-1;i++){

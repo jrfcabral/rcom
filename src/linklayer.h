@@ -45,6 +45,7 @@ The link layer is the group of methods and communications protocols that only op
 #define E_ABORT -50
 #define E_CLOSED -100
 #define E_GENERIC -200
+#define E_AGAIN -300
 
 unsigned int info;
 /*FRAME FORMAT AND TYPES*/
@@ -113,7 +114,7 @@ int llwrite(int fd, char* buffer, int length);
 int llclose(int fd);
 int llread(int fd, char *buffer);
 int waitForByte(int fd, char expectedCommand);
-int verifyBCC(char* data, int datalength, char correctBCC);
+int verifyBCC(unsigned char* data, int datalength, char correctBCC);
 int sendByte(int fd, char, char );
 int readData(int fd, char** buffer);
 Command receiveCommand(int fd);
