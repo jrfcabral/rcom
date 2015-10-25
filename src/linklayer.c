@@ -1,23 +1,8 @@
 #include "alarm.h"
 #include "linklayer.h"
 
+static unsigned char command_possible[] = {SET, UA, RR_1, RR_0, REJ_1, REJ_0, DISC, I_1, I_0 };
 
-state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state ifFail){
-	state toGo;
-	if(expected == read){
-		toGo = (state) ifSucc;
-		printf("Sucesso, vou pro estado %d\n", toGo);
-	}
-	else if(read == FLAG){
-		toGo = WAIT_A;
-		printf("Flag, vou pro estado %d\n", toGo);
-	}
-	else{
-		toGo = ifFail;
-		printf("Falhanço, vou pro estado %d\n", toGo);
-	}
-	return toGo;
-}
 
 int main(int argc, char **argv){
 
@@ -30,21 +15,18 @@ int main(int argc, char **argv){
 	ll.timeOut = 10;
 	ll.sequenceNumber = 0;
 	ll.numTransmissions  = 3;
-//	char buffer[] = {FLAG, FLAG, ESCAPE, ESCAPE, 0x6e};
-//	char buffer[] = {0, 0, 1, 1, 1,FLAG,2,3};
 
 	int fd = llopen(0, mode);
 	if(mode == SEND){
 
-		char message[] = "Uma bela~ mensag~em cheia de ~til~es";
+		char message[] = "mens agem";
 		llwrite(fd, message, strlen(message));
 		//llclose(fd);
 	}
 
 	else if (mode == RECEIVE){
 	char *bufferino = (char *) malloc(1);
-
-	llread(fd, bufferino);
+		llread(fd, bufferino);
 	}
 	return 0;
 
@@ -83,7 +65,9 @@ int byteDeStuffing(unsigned char** buf, int length) {
 			(*buf)[i] ^= 0x20;
 		}
 	}
+	puts("reallocing\n");
 	*buf = (unsigned char*) realloc(*buf, length);
+	puts("reallocced\n");
 	return length;
 }
 
@@ -107,12 +91,64 @@ int llwrite(int fd, char* buffer, int length){
 	message[n+4] = dataBCC;
 	message[n+5] = FLAG;
 	int wrote = write(fd, message, n+6);
+	puts("message sent");
 	return wrote;
 	//todo ARQ
 }
 
 int llread(int fd, char *buffer){
+	printf("preparing to read frame\n");
+	Command command = receiveCommand(fd);
+	puts("llread:received command");
+	int repeated;
+	if (command.command == I(ll.sequenceNumber))
+		repeated = 0;
+	else if (command.command == I(!ll.sequenceNumber))
+		repeated = 1;
+	else if (command.command == DISC){
+			printf("llread: disconnecting\n");
+			while(!sendByte(fd, DISC, 0x01)){}
+			puts("llread: disc confirmation sent\n");
+			command = receiveCommand(fd);
+			if (command.command != UA){
+							puts("llread: didnt receive UA after disc confirmation\n");
+							return E_GENERIC;
+			}
+			else{
+				puts("llread: connection successfully closed\n");
+				return E_CLOSED;
+			}
+	}
 
+	if (command.command == I(0) || command.command == I(1)){
+		puts("llread: received a data frame\n");
+		//if we never saw this frame before, consider it
+		if(!repeated){
+			puts("llread: new data frame\n");
+			int length = byteDeStuffing(&command.data, command.size);
+			puts("llread: destuffing succeeded\n");
+			int bccOK = verifyBCC(command.data, length, command.data[length-1]);
+			//Reject frames with wrong BCC
+			if(!bccOK){
+				puts("llread: frame was damaged, rejecting and rereading\n");
+				while(!sendByte(fd, REJ(ll.sequenceNumber), 0x03)){}
+					return llread(fd, buffer);
+			}
+
+			//accept the frame and confirm it
+			puts("llread: frame bcc ok, accepting\n");
+			memcpy(buffer, command.data, length);
+			while(!sendByte(fd, RR(!ll.sequenceNumber),0x03)){}
+			puts("llread: receiver ready sent, message confirmed\n");
+			ll.sequenceNumber = !ll.sequenceNumber;
+			return length;
+
+		}
+		puts("llread: message repeated");
+	}
+	else{
+		printf("received unexpected command 0x%02x\n",command.command);
+	}
 
 
 }
@@ -168,7 +204,7 @@ int readData(int fd, char** buffer){
 int getHeader(int fd){
 	unsigned char header[3], input;
 	int r = 0;
-	puts("getheader called");
+	puts("getheader called\n");
 	while(r == 0){
 		r = read(fd, &input, 1);
 		printf("getHeader read 0x%02x\n", input);
@@ -243,10 +279,11 @@ Command receiveCommand(int fd){
 	while(currentState != EXIT){
 		char byte;
 		int escaped = 0;
-
+		puts("going to sleep\n");
 		while(!read(fd, &byte, 1))
 			continue;
 
+		printf("receiveCommand: received byte 0x%02x\n", byte);
 		switch(currentState){
 
 			case WAIT_FLAG:
@@ -312,7 +349,7 @@ Command receiveCommand(int fd){
 					else
 					command.data[command.size-1] = byte;
 
-
+					break;
 			default:
 				perror("Something very strange happened\n");
 				exit(-3);
@@ -383,10 +420,10 @@ int llopen(int port, int mode){
 		printf("Ready to read\n");
 
 	  Command command = receiveCommand(fd);
-
-
-
-
+		if(command.command == SET){
+			puts("llopen_receive: received SET message\n");
+			while(!sendByte(fd, UA, 0x03)){}
+		}
 
 	}
 	else if(mode == SEND){
@@ -412,6 +449,6 @@ send: ;
 	state currentState = WAIT_FLAG;
  	Command command = receiveCommand(fd);
 
-	return fd;
 	}
+	return fd;
 }

@@ -36,10 +36,15 @@ The link layer is the group of methods and communications protocols that only op
 #define SEND 0
 #define RECEIVE 1
 #define ESCAPE 0x10
+#define I(n) ( n << 5 )
+#define RR(n)  ( RR_0 | n )
+#define REJ(n) ( REJ_0 | n )
 
 //Error codes
 #define E_TIMEOUT -20
 #define E_ABORT -50
+#define E_CLOSED -100
+#define E_GENERIC -200
 
 unsigned int info;
 /*FRAME FORMAT AND TYPES*/
@@ -71,7 +76,6 @@ typedef enum {
 
 #define NUM_COMMANDS 9
 
-unsigned char command_possible[] = {SET, UA, RR_1, RR_0, REJ_1, REJ_0, DISC, I_1, I_0 };
 
 typedef struct{
 	char port[50]; //port : format /dev/ttySx
