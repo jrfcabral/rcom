@@ -3,7 +3,7 @@
 
 
 state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state ifFail){
-	state toGo;	
+	state toGo;
 	if(expected == read){
 		toGo = (state) ifSucc;
 		printf("Sucesso, vou pro estado %d\n", toGo);
@@ -15,7 +15,7 @@ state verifyByte(unsigned char expected, unsigned char read, state ifSucc, state
 	else{
 		toGo = ifFail;
 		printf("Falhanço, vou pro estado %d\n", toGo);
-	}	
+	}
 	return toGo;
 }
 
@@ -38,12 +38,12 @@ int main(int argc, char **argv){
 
 		char message[] = "Uma bela~ mensag~em cheia de ~til~es";
 		llwrite(fd, message, strlen(message));
-		//llclose(fd);	
+		//llclose(fd);
 	}
 
 	else if (mode == RECEIVE){
 	char *bufferino = (char *) malloc(1);
-	
+
 	llread(fd, bufferino);
 	}
 	return 0;
@@ -55,7 +55,7 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 	int n;
 	*stuffedBuffer = (char*) malloc(1);
 	int newLength = 0;
-	for(n = 0; n < length; n++){	
+	for(n = 0; n < length; n++){
 		if (buffer[n] == FLAG || buffer[n] == ESCAPE){
 			newLength+=2;
 			*stuffedBuffer = realloc(*stuffedBuffer, newLength);
@@ -68,7 +68,7 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 		}
 	}
 	write(STDOUT_FILENO, *stuffedBuffer, newLength);
-	
+
 	return newLength;
 
 }
@@ -112,44 +112,7 @@ int llwrite(int fd, char* buffer, int length){
 }
 
 int llread(int fd, char *buffer){
-	int command = -1;
-	while(command == -1){
-		command = getHeader(fd);
-	}
-	
-	if(command == C_DISC){
-		char flag;
-		int l = 0;
-		printf("will now try to read the flag, god help me\n");
-		while(!l)
-			l = read(fd, &flag, 1);
-		printf("read what should be the flag and it was 0x%02x\n", flag);
-		if (flag != FLAG)
-			return -1;
-		if(!sendByte(fd, A_SEND, C_DISC))
-			return -1;
-		if(!waitForByte(fd, C_UA))
-			return -1;
-		printf("received: %d\nATE JAZZ\n", command);
-		return 1;
-	}
-	
-	//read data
-	char* data;
-	int stuffedlength = readData(fd, &data);
-	int destuffedlength = byteDeStuffing(&data, stuffedlength);
-	
-	int j;
-	for(j=0; j < destuffedlength; j++){
-		printf("destuffing: 0x%02x, ASCII: %c\n", data[j], data[j]);
-	}
-	
-	int bccOK = verifyBCC(data, destuffedlength-1, data[destuffedlength-2]);
 
-
-
-
-	free(data);
 
 
 }
@@ -161,11 +124,11 @@ int verifyBCC(char* data, int datalength, char correctBCC){
 		actualBCC ^= data[i];
 		printf("%d, 0x%02x\n", i, actualBCC);
 	}
-		
+
 	if (actualBCC != correctBCC){
 		printf("calculated BCC to be 0x%02x, expected it to be 0x%02x\n", actualBCC, correctBCC);
 	}
-		
+
 	return actualBCC == correctBCC;
 }
 
@@ -174,31 +137,31 @@ int readData(int fd, char** buffer){
 	int length = 0;
 	int escaped = 0;
 	int done = 0;
-	
+
 	while(!done){
 		char in;
 		int n = 0;
 		while(!n)
 			n = read(fd, &in, 1);
-		
+
 		if (!escaped && in == FLAG)
 			done = 1;
-		
+
 		*buffer = realloc(*buffer, ++length);
-		(*buffer)[length-1] = in; 
-		printf("ReadData read 0x%02x, ASCII: %c\n", in, in);		
-		
+		(*buffer)[length-1] = in;
+		printf("ReadData read 0x%02x, ASCII: %c\n", in, in);
+
 		if (!escaped && in == ESCAPE){
 			escaped = 1;
-			
+
 		}
-		
+
 		else if (escaped){
 			escaped = 0;
 		}
 	}
-	return length;	
-	
+	return length;
+
 }
 
 
@@ -210,7 +173,7 @@ int getHeader(int fd){
 		r = read(fd, &input, 1);
 		printf("getHeader read 0x%02x\n", input);
 	}
-	
+
 	if(input != FLAG)
 		return -1;
 
@@ -223,7 +186,7 @@ int getHeader(int fd){
 		}
 		printf("read: %x\n", header[i]);
 		if(header[i] == FLAG){
-			i = -1; 
+			i = -1;
 			continue;
 		}
 	}
@@ -232,7 +195,7 @@ int getHeader(int fd){
 		r = read(fd, (header+2), 1);
 
 	if(header[2] == (header[1]^header[0])){
-		return (int) header[1];	
+		return (int) header[1];
 	}
 	return -1;
 }
@@ -244,7 +207,7 @@ int sendByte(int fd, char address, char command){
 		return -1;
 	puts("FRAME with command %02x sent\n");
 	return 1;
-	
+
 }
 
 int waitForByte(int fd, char expectedCommand){
@@ -257,70 +220,119 @@ int waitForByte(int fd, char expectedCommand){
 		int n = 0;
 		while(!n)
 			n = read(fd, &in, 1);
-			
+
 		if(in == FLAG){
 			return 1;
 		}
 		else{
 			command = -1;
-			continue;		
+			continue;
 		}
 	}
 	return 0;
 }
 
-int waitForByteUgly(int fd, char expectedCommand){
+Command receiveCommand(int fd){
 	state currentState = WAIT_FLAG;
+	Command command;
+	command.data = (unsigned char*) malloc(1);
+	command.size = 0;
+	int isCommand = 0;
+	int j;
+
 	while(currentState != EXIT){
-		unsigned char in;
-	      if(!read(fd, &in, 1)){
-	      	if(resend){
-	      		resend = 0;
-	      		return E_TIMEOUT;
-	      	}
-	      	else if (abort_send){
-	      		abort_send = 0;
-	      		return E_ABORT;
-	      	}
-			
-	      	continue;
-	      }
-	      	
+		char byte;
+		int escaped = 0;
+
+		while(!read(fd, &byte, 1))
+			continue;
+
 		switch(currentState){
+
 			case WAIT_FLAG:
-				currentState = verifyByte(FLAG, in, WAIT_A, WAIT_FLAG);                  
+					if (byte == FLAG)
+						currentState = WAIT_A;
+					continue;
 				break;
+
 			case WAIT_A:
-				currentState = verifyByte(A_SEND, in, WAIT_C, WAIT_FLAG);                 
+				if (byte == A_SEND || byte == A_RECEIVE){
+					currentState = WAIT_C;
+					command.address = byte;
+				}
+				else if (byte == FLAG)
+					currentState = WAIT_A;
+				else
+					currentState = WAIT_FLAG;
+				continue;
 				break;
+
 			case WAIT_C:
-				currentState = verifyByte(expectedCommand, in, WAIT_BCC, WAIT_FLAG);                   
+					for(j= 0; j < NUM_COMMANDS && !isCommand; j++){
+						isCommand = (command_possible[j] == byte);
+					}
+					if (isCommand){
+						command.command = byte;
+						currentState = WAIT_BCC;
+					}
+					else if (byte == FLAG)
+						currentState = WAIT_A;
+					else
+						currentState = WAIT_FLAG;
+					continue;
 				break;
-			case WAIT_BCC: 
-				currentState = verifyByte(A_SEND^expectedCommand, in, BCC_OK, WAIT_FLAG);                 
+
+			case WAIT_BCC:
+				if (byte != (command.command^command.address))
+					currentState = WAIT_FLAG;
+				else
+					currentState = BCC_OK;
+				continue;
 				break;
+
 			case BCC_OK:
-				currentState = verifyByte(FLAG, in, EXIT, WAIT_FLAG);                 
-				break;
+					if(byte == FLAG && !escaped){
+						currentState = EXIT;
+						continue;
+					}
+
+					command.data = realloc(command.data, ++command.size);
+
+					if (!escaped && byte == ESCAPE){
+						escaped = 1;
+						command.data[command.size-1] = byte;
+					}
+
+
+					if (escaped){
+						command.data[command.size-1] = byte^0x20;
+						escaped = 0;
+					}
+
+					else
+					command.data[command.size-1] = byte;
+
+
 			default:
 				perror("Something very strange happened\n");
 				exit(-3);
-				break;                        
+				break;
 		}
 	}
-	return 1;
+	return command;
 }
 
 int llclose(int fd){
 	if(!sendByte(fd, A_SEND, C_DISC))
 		return -1;
 	if(!waitForByte(fd, C_DISC)){
-		return -1;	
+		return -1;
 	}
 	if(!sendByte(fd, A_RECEIVE, C_UA))
 		return -1;
 	return 1;
 }
+
 
 int llopen(int port, int mode){
 
@@ -332,7 +344,7 @@ int llopen(int port, int mode){
 	fd = open(ll.port, O_RDWR|O_NOCTTY);
 	if(fd <0){
 		perror(fileName);
-		exit(-1);	
+		exit(-1);
 	}
 
 	ll.baudRate = BAUDRATE;
@@ -343,7 +355,7 @@ int llopen(int port, int mode){
 
 	if(tcgetattr(fd, &oldTio) == -1){
 		perror("tcgetattr error");
-		exit(-1);	
+		exit(-1);
 	}
 	ll.oldtio = oldTio;
 
@@ -370,13 +382,9 @@ int llopen(int port, int mode){
 
 		printf("Ready to read\n");
 
-		int ret = waitForByteUgly(fd, C_SET);
-		if(ret == 1){
-			printf("Received SET frame\n");
-			unsigned char UA[5] = {FLAG, A_SEND, C_UA, UA[1]^UA[2], FLAG};
-			write(fd, UA, 5);
-		}
-		
+	  Command command = receiveCommand(fd);
+
+
 
 
 
@@ -394,26 +402,16 @@ int llopen(int port, int mode){
 			exit(-1);
 		}
 
-send: ;	
+send: ;
 	resend = 0;
 	unsigned char SET[5] = {FLAG, A_SEND, C_SET, SET[1]^SET[2], FLAG};
 	if(write(fd, SET, 5) != 5)
 	      return -1;
-	printf("escrevi\n");	
+	printf("escrevi\n");
 	alarm(ll.timeOut);
 	state currentState = WAIT_FLAG;
-	int ret = waitForByteUgly(fd, C_UA);
-	if (ret == E_TIMEOUT)
-		goto send;
-	else if (ret == E_ABORT)
-		return -1;
-	
+ 	Command command = receiveCommand(fd);
 
-	
-	
-      alarm(0);
+	return fd;
 	}
-
-	return fd;	
 }
-

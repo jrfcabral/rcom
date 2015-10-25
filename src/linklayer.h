@@ -1,7 +1,7 @@
-/*In computer networking, the link layer is the lowest layer in the Internet Protocol Suite. 
-The link layer is the group of methods and communications protocols that only operate on the link that a host is physically connected to. 
+/*In computer networking, the link layer is the lowest layer in the Internet Protocol Suite.
+The link layer is the group of methods and communications protocols that only operate on the link that a host is physically connected to.
 */
-#pragma once 
+#pragma once
 #include <termios.h>
 #include <stdio.h>
 
@@ -50,7 +50,7 @@ typedef enum {
 	WAIT_C,
 	WAIT_BCC,
 	BCC_OK,
-	EXIT	
+	EXIT
 } state;
 
 typedef enum {
@@ -58,12 +58,20 @@ typedef enum {
 } State; //tramas de informacao
 
 typedef enum {
-	SET, //set up
-	UA,  //unnumbered acknowledgement
-	RR,  //receiver ready 
-	REJ, //reject / negative ACK
-	DISC //disconnect
+	SET = 0x07, //set up
+	UA = 0x03,  //unnumbered acknowledgement
+	RR_1 = 0x21,  //receiver ready
+	RR_0 = 0x20,
+	REJ_1 = 0x25,
+	REJ_0 = 0x05, //reject / negative ACK
+	DISC = 0x0B,
+	I_1 = 0x20,
+	I_0 = 0x00 //disconnect
 } Control;
+
+#define NUM_COMMANDS 9
+
+unsigned char command_possible[] = {SET, UA, RR_1, RR_0, REJ_1, REJ_0, DISC, I_1, I_0 };
 
 typedef struct{
 	char port[50]; //port : format /dev/ttySx
@@ -77,10 +85,18 @@ typedef struct{
 	//termios
 
 	struct termios oldtio, newtio;
-	
+
 
 
 }LinkLayer;
+
+typedef struct {
+	unsigned char command;
+	unsigned char* data;
+	unsigned char address;
+	unsigned int size;
+} Command;
+
 
 LinkLayer ll;
 
@@ -96,5 +112,4 @@ int waitForByte(int fd, char expectedCommand);
 int verifyBCC(char* data, int datalength, char correctBCC);
 int sendByte(int fd, char, char );
 int readData(int fd, char** buffer);
-
-
+Command receiveCommand(int fd);
