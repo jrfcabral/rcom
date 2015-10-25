@@ -25,8 +25,9 @@ int main(int argc, char **argv){
 	}
 
 	else if (mode == RECEIVE){
-	char *bufferino = (char *) malloc(1);
+	char *bufferino;
 		llread(fd, bufferino);
+		free(bufferino);
 	}
 	return 0;
 
@@ -163,6 +164,7 @@ int llread(int fd, char *buffer){
 			while(!sendByte(fd,0x03, RR(!ll.sequenceNumber))){}
 			puts("llread: receiver ready sent, message confirmed\n");
 			ll.sequenceNumber = !ll.sequenceNumber;
+			free(command.data);
 			return length;
 
 		}
