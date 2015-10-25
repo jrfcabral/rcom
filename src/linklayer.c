@@ -158,7 +158,7 @@ int llread(int fd, char *buffer){
 
 			//accept the frame and confirm it
 			puts("llread: frame bcc ok, accepting\n");
-			buffer = (char*) malloc(length);			
+			buffer = (char*) malloc(length);
 			memcpy(buffer, command.data, length);
 			while(!sendByte(fd,0x03, RR(!ll.sequenceNumber))){}
 			puts("llread: receiver ready sent, message confirmed\n");
@@ -169,7 +169,7 @@ int llread(int fd, char *buffer){
 		//this frame is repeated. Confirm it and ask for the new frame
 		else{
 				puts("llread: message repeated");
-				while(!sendByte(fd, RR(ll.sequenceNumber),0x03)){}
+				while(!sendByte(fd, 0x03, RR(ll.sequenceNumber))){}
 				return E_GENERIC;
 		}
 
