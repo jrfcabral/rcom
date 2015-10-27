@@ -27,7 +27,7 @@ int main(int argc, char **argv){
 	else if (mode == RECEIVE){
 	char *bufferino;
 		llread(fd, bufferino);
-		free(bufferino);
+		//free(bufferino);
 	}
 	return 0;
 
@@ -61,10 +61,17 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 
 int byteDeStuffing(unsigned char** buf, int length) {
 	int i;
-	for (i = 0; i < length; ++i) {
+	for(i=0; i < length;i++)
+		printf("%02x\n", buf[0][i]);
+	
+	printf("length is %d\n", length);
+	
+
+	for (i = 0; i < length; i++){ 
 		if ((*buf)[i] == ESCAPE) {
 			memmove(*buf + i, *buf + i + 1, length - i - 1);
 			length--;
+printf("length is %d\n", length);
 			(*buf)[i] ^= 0x20;
 		}
 	}
@@ -151,8 +158,8 @@ int llread(int fd, char *buffer){
 			puts("llread: disc confirmation sent\n");
 			command = receiveCommand(fd);
 			if (command.command != UA){
-							puts("llread: didnt receive UA after disc confirmation\n");
-							return E_GENERIC;
+				puts("llread: didnt receive UA after disc confirmation\n");
+				return E_GENERIC;
 			}
 			else{
 				puts("llread: connection successfully closed\n");
@@ -165,7 +172,7 @@ int llread(int fd, char *buffer){
 		//if we never saw this frame before, consider it
 		if(!repeated){
 			puts("llread: new data frame\n");
-			int length = byteDeStuffing(&command.data, command.size);
+			int length = byteDeStuffing(&(command.data), command.size);
 			puts("llread: destuffing succeeded\n");
 			int bccOK = verifyBCC(command.data, length, command.data[length-1]);
 			//Reject frames with wrong BCC
@@ -207,7 +214,7 @@ int verifyBCC(unsigned char* data, int datalength, char correctBCC){
 	int i;
 	for(i=0;i<datalength-1;i++){
 		actualBCC ^= data[i];
-		printf("%d, 0x%02x\n", i, actualBCC);
+		printf("%d, char: %d, bcc: 0x%02x\n", i, data[i], actualBCC);
 	}
 
 	if (actualBCC != correctBCC){
@@ -236,16 +243,18 @@ Command receiveCommand(int fd){
 	command.data = (unsigned char*) malloc(1);
 	command.size = 0;
 	int isCommand = 0;
-	int j;
+	int j;		
+	int escaped = 0;
 
 	while(currentState != EXIT){
 		char byte;
-		int escaped = 0;
-		puts("going to sleep\n");
+
+		//puts("going to sleep\n");
 		while(!read(fd, &byte, 1))
 			continue;
 
-		printf("receiveCommand: received byte 0x%02x\n", byte);
+		//printf("receiveCommand: received byte 0x%02x\n", byte);
+		
 		switch(currentState){
 
 			case WAIT_FLAG:
@@ -294,21 +303,14 @@ Command receiveCommand(int fd){
 						currentState = EXIT;
 						continue;
 					}
-
+					
+					printf("data byte received 0x%02x\n", byte);
 					command.data = realloc(command.data, ++command.size);
 
-					if (!escaped && byte == ESCAPE){
+					if (byte == ESCAPE && !escaped)
 						escaped = 1;
-						command.data[command.size-1] = byte;
-					}
-
-
-					if (escaped){
-						command.data[command.size-1] = byte^0x20;
+					else if(escaped)
 						escaped = 0;
-					}
-
-					else
 					command.data[command.size-1] = byte;
 
 					break;
