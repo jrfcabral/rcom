@@ -88,6 +88,7 @@ typedef struct{
 	int currentTries;
 	struct termios oldtio, newtio;
 
+
 }LinkLayer;
 
 typedef struct {

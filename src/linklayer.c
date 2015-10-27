@@ -20,14 +20,19 @@ int main(int argc, char **argv){
 	if(fd < 0)
 		return -1;
 	if(mode == SEND){
-		sleep(3);
 		char message[] = "~~~";
+		char message2[] = "aaa";
+		char message3[] = "~a~";
 		llwrite(fd, message, strlen(message));
-		//llclose(fd);
+		llwrite(fd, message2, strlen(message));
+		llwrite(fd, message3, strlen(message));
+		llclose(fd);
 	}
 
 	else if (mode == RECEIVE){
 	char *bufferino;
+		llread(fd, bufferino);
+		llread(fd, bufferino);
 		llread(fd, bufferino);
 		//free(bufferino);
 	}
@@ -263,7 +268,7 @@ Command receiveCommand(int fd){
 			}
 		}
 
-		//printf("receiveCommand: received byte 0x%02x\n", byte);
+		printf("receiveCommand: received byte 0x%02x\n", byte);
 		
 		switch(currentState){
 
@@ -334,15 +339,18 @@ Command receiveCommand(int fd){
 }
 
 int llclose(int fd){
+	alarm(0);
 	if(!sendByte(fd, A_SEND, C_DISC))
 		return -1;
-
+	puts("sent disc");
 	Command command = receiveCommand(fd);
 	if(command.command != DISC){
 		return -1;
 	}
+	puts("received a disc");
 	if(!sendByte(fd, A_RECEIVE, C_UA))
 		return -1;
+	puts("confirmed");
 	return 1;
 }
 
