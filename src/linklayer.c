@@ -13,13 +13,13 @@ int main(int argc, char **argv){
 	}
 
 	ll.timeOut = 10;
-	ll.sequenceNumber = 0;
+	ll.sequenceNumber = 0; 
 	ll.numTransmissions  = 3;
 
 	int fd = llopen(0, mode);
 	if(mode == SEND){
 
-		char message[] = "mens agem";
+		char message[] = "~~~";
 		llwrite(fd, message, strlen(message));
 		//llclose(fd);
 	}
@@ -50,7 +50,9 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 			stuffedBuffer[0][newLength-1] = buffer[n];
 		}
 	}
-	write(STDOUT_FILENO, *stuffedBuffer, newLength);
+	puts("stuffed buffer follows");
+	for(n=0; n < newLength; n++)
+		printf("%d, %02x\n", n, stuffedBuffer[0][n]);
 
 	return newLength;
 
@@ -75,25 +77,41 @@ int byteDeStuffing(unsigned char** buf, int length) {
 char generateBCC(const char* buffer, const int length){
 	int i;
 	char bcc = 0;
-	for(i = 0; i < length; i++)
+	for(i = 0; i < length; i++){
+		printf("%d, char %d, 0x%02x\n", i, buffer[i], bcc);
 		bcc ^=buffer[i];
+	}
+	printf("generated bcc 0x%02x\n", bcc);
 	return bcc;
 }
 
 
 int llwrite(int fd, char* buffer, int length){
-	char dataBCC = generateBCC(buffer, length);
+
 	char *bufferStuffed;
 	char header[] = { FLAG, 0x03, I(ll.sequenceNumber), header[1]^header[2] };
-	int n= byteStuffing(buffer,  length, &bufferStuffed	);
+	char dataBCC = generateBCC(buffer, length);
+	char* toStuff = malloc(length+1);
+	memcpy(toStuff, buffer, length);
+	toStuff[length] = dataBCC;
+ 
+
+	int n= byteStuffing(toStuff,  length+1, &bufferStuffed);
+
+	int k;
+	puts("");
+	for (k=0;k<n;k++){
+		printf("\n%d\n", bufferStuffed[k]);
+	}
+		puts("");
 	char* message = (char*)  malloc(n+6);
+
 	memcpy(message, header, 4);
 	memcpy(message+4, bufferStuffed, n);
-	message[n+4] = dataBCC;
-	message[n+5] = FLAG;
+	message[n+4] = FLAG;
 	int wrote = 0;
 	while(!wrote)
-		wrote = write(fd, message, n+6);
+		wrote = write(fd, message, n+5);
 
 
 	puts("message sent\n");
