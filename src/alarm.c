@@ -28,7 +28,7 @@ void installAlarm(int tries){
 	sigaction(SIGALRM, &action, NULL);
 	alarmOff = 0;
 	resend = 0;
-	retries = tries;
+	retries = 0;
 }
 
 

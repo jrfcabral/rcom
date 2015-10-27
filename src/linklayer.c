@@ -17,8 +17,10 @@ int main(int argc, char **argv){
 	ll.numTransmissions  = 3;
 
 	int fd = llopen(0, mode);
+	if(fd < 0)
+		return -1;
 	if(mode == SEND){
-
+		sleep(3);
 		char message[] = "~~~";
 		llwrite(fd, message, strlen(message));
 		//llclose(fd);
@@ -130,11 +132,13 @@ int llwrite(int fd, char* buffer, int length){
 	//was asked for new frame
 	if (command.command == RR(!ll.sequenceNumber)){
 		ll.sequenceNumber = (!ll.sequenceNumber);
-		ll.numTransmissions = 0;
+		retries = 0;
 		return length;
 	}
 	//frame was rejected, resend
-	if (command.command == REJ(ll.sequenceNumber) || (command.command == NONE && ll.numTransmissions < retries)){
+	if (command.command == REJ(ll.sequenceNumber) || (command.command == NONE && ll.numTransmissions > retries)){
+		if (command.command == NONE)
+			retries++;
 		puts("byte was rejected,resending or no response\n");
 		return llwrite(fd, buffer, length);
 	}
@@ -426,11 +430,15 @@ send: ;
 	
 	if(command.command == NONE){
 		
-		ll.numTransmissions++;
-		if (ll.numTransmissions > retries)
+		retries++;
+		if (ll.numTransmissions < retries){
+			puts("llopen_writer timeouts exceeded");
 			return -1;
-		else 
+		}
+		else{ 
+			puts("llopen_writer timeout");
 			goto send;
+		}
 	}
 	if (command.command == UA)
 		return fd;

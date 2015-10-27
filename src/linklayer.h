@@ -86,14 +86,7 @@ typedef struct{
 	int timeOut; //timeout value
 	int numTransmissions; //number of retries if it fails
 	int currentTries;
-
-	char frame[MAX_SIZE];
-
-	//termios
-
 	struct termios oldtio, newtio;
-
-
 
 }LinkLayer;
 
