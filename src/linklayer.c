@@ -395,8 +395,9 @@ int llopen(int port, int mode){
 		if(command.command == SET){
 			puts("llopen_receive: received SET message\n");
 			while(!sendByte(fd, UA, 0x03)){}
+			return fd;
 		}
-
+		return E_GENERIC;
 	}
 	else if(mode == SEND){
 		newTio.c_lflag = 0;
@@ -420,7 +421,9 @@ send: ;
 	alarm(ll.timeOut);
 	state currentState = WAIT_FLAG;
  	Command command = receiveCommand(fd);
+	
 	printf("0x%02x command\n", command.command);
+	
 	if(command.command == NONE){
 		
 		ll.numTransmissions++;
