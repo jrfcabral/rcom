@@ -130,15 +130,16 @@ int llwrite(int fd, char* buffer, int length){
 	//was asked for new frame
 	if (command.command == RR(!ll.sequenceNumber)){
 		ll.sequenceNumber = (!ll.sequenceNumber);
+		ll.numTransmissions = 0;
 		return length;
 	}
 	//frame was rejected, resend
-	if (command.command == REJ(ll.sequenceNumber)){
-		puts("byte was rejected,resending\n");
+	if (command.command == REJ(ll.sequenceNumber) || (command.command == NONE && ll.numTransmissions < retries)){
+		puts("byte was rejected,resending or no response\n");
 		return llwrite(fd, buffer, length);
 	}
 	else
-		puts("llwrite: received unexpected response\n");
+		return -1;
 
 	return length;
 }
@@ -250,8 +251,13 @@ Command receiveCommand(int fd){
 		char byte;
 
 		//puts("going to sleep\n");
-		while(!read(fd, &byte, 1))
-			continue;
+		while(!read(fd, &byte, 1)){
+			if (abort_send || resend){
+				Command nullCommand;
+				nullCommand.command = NONE;
+				return nullCommand;
+			}
+		}
 
 		//printf("receiveCommand: received byte 0x%02x\n", byte);
 		
@@ -414,7 +420,15 @@ send: ;
 	alarm(ll.timeOut);
 	state currentState = WAIT_FLAG;
  	Command command = receiveCommand(fd);
-
+	
+	if(command.command != UA)
+		
+		ll.numTransmissions++;
+		if (ll.numTransmissions > retries)
+			return -1;
+		else 
+			return llopen(port, mode);
 	}
 	return fd;
-}
+};
+			

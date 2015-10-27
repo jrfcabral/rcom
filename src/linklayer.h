@@ -72,7 +72,8 @@ typedef enum {
 	REJ_0 = 0x05, //reject / negative ACK
 	DISC = 0x0B,
 	I_1 = 0x20,
-	I_0 = 0x00 //disconnect
+	I_0 = 0x00, //disconnect
+	NONE = 0xFF
 } Control;
 
 #define NUM_COMMANDS 9
@@ -84,6 +85,7 @@ typedef struct{
 	int sequenceNumber; //frame sequece number
 	int timeOut; //timeout value
 	int numTransmissions; //number of retries if it fails
+	int currentTries;
 
 	char frame[MAX_SIZE];
 
