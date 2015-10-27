@@ -420,15 +420,18 @@ send: ;
 	alarm(ll.timeOut);
 	state currentState = WAIT_FLAG;
  	Command command = receiveCommand(fd);
-	
-	if(command.command != UA)
+	printf("0x%02x command\n", command.command);
+	if(command.command == NONE){
 		
 		ll.numTransmissions++;
 		if (ll.numTransmissions > retries)
 			return -1;
 		else 
-			return llopen(port, mode);
+			goto send;
 	}
-	return fd;
-};
+	if (command.command == UA)
+		return fd;
+	return -1;
+	}
+}
 			
