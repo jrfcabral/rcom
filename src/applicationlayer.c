@@ -25,6 +25,12 @@ int main(int argc, char **argv){
 		exit(-1);
 	}	
 	
+	
+	/*char test[] = "/bin/src/testerino.xd";
+	char *coise = malloc(strlen(test));
+	coise = basename(test);
+	puts(coise);*/
+
 	int serialPort = llopen(argv[1], mode);
 	if (serialPort < 0){
 		perror("");
@@ -33,8 +39,11 @@ int main(int argc, char **argv){
 	
 	int result;	
 	
+
+
 	if (mode == SEND){
-		result = sendFile(serialPort, fd, argv[1]);
+
+		result = sendFile(serialPort, fd, argv[3]);
 	}
 	else if (mode == RECEIVE){
 		result = readFile(serialPort, fd);
@@ -57,32 +66,37 @@ int getSize(int fd){
 	
 }
 
-int sendFile(int port, int fd, char *fileName)
+int sendFile(int port, int fd, char *filePath)
 {
 	int size = getSize(fd);
 	unsigned char* buffer = (unsigned char*) mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
 	
 	int length;
 
-	unsigned char* packet = makeControlPacket(size , fileName, 1, &length);
-	if(llwrite(fd, packet, length) < 0 )
+	unsigned char* packet = makeControlPacket(size , filePath, 1, &length);
+	printf("gonna send following packet of length %d: \n", length);
+		int j;
+		for(j = 0; j < length; j++){
+			printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
+		}
+	if(llwrite(port, packet, length) < 0 )
 		return -1;
 		
 	int i = 0;
 	for(i = 0; i < (size/PACKET_SIZE); i++){
 		packet = makeDataPacket(PACKET_SIZE, buffer, &length);
-		if(llwrite(fd, packet, length) < 0 )
+		if(llwrite(port, packet, length) < 0 )
 			return -1;
 		buffer += PACKET_SIZE;
 	}
 	
 	if((size % PACKET_SIZE) != 0){
 		packet = makeDataPacket((size % PACKET_SIZE), buffer, &length);
-		if(llwrite(fd, packet, length) < 0 )
+		if(llwrite(port, packet, length) < 0 )
 			return -1;
 	}
 	
-	packet = makeControlPacket(size, fileName, 2, &length);
+	packet = makeControlPacket(size, filePath, 2, &length);
 	llwrite(fd, packet, length);
 	
 	
@@ -180,15 +194,27 @@ int getControlPacket(int port, ControlPacket* packet){
 
 
 unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* length){
+	int i, stopper;
+	for(i = strlen(name); i > 0; i--){
+		if(name[i] == '/'){
+			stopper = i+1	;
+		}		
+	}
+	char *actualName = (char *)malloc(strlen(name) - stopper + 1);
+	
+	for(i = 0; i < (strlen(name) - stopper); i++){
+		actualName[i] = name[stopper+i];
+	}
+	actualName[(strlen(name) - stopper)] = '\0';
 	unsigned char* packet = malloc(1+2+sizeof(unsigned int)+2+strlen(name));
 	packet[0] = end;
 	packet[1] = TYPE_FILE_SIZE;
 	packet[2] = sizeof(unsigned int);
 	memcpy(&packet[3], &size, sizeof(unsigned int));
 	packet[3+sizeof(unsigned int)] = TYPE_FILE_NAME;
-	packet[4+sizeof(unsigned int)] = strlen(name);
-	memcpy(&packet[5+sizeof(unsigned int)], name, strlen(name));
-	*length = 1+2+sizeof(unsigned int)+2+strlen(name);
+	packet[4+sizeof(unsigned int)] = strlen(actualName)+1;
+	memcpy(&packet[5+sizeof(unsigned int)], actualName, strlen(actualName)+1);
+	*length = 1+2+sizeof(unsigned int)+2+strlen(actualName)+1;
 	return packet;		
 }
 
