@@ -22,9 +22,8 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 			stuffedBuffer[0][newLength-1] = buffer[n];
 		}
 	}
-	puts("stuffed buffer follows");
-	for(n=0; n < newLength; n++)
-		printf("%d, %02x\n", n, stuffedBuffer[0][n]);
+	
+	
 
 	return newLength;
 
@@ -34,7 +33,7 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 int byteDeStuffing(unsigned char** buf, int length) {
 	int i;
 	for(i=0; i < length;i++)
-		//printf("%02x\n", buf[0][i]);
+		printf("%02x\n", buf[0][i]);
 	
 	//printf("length is %d\n", length);
 	
@@ -47,9 +46,9 @@ int byteDeStuffing(unsigned char** buf, int length) {
 			(*buf)[i] ^= 0x20;
 		}
 	}
-	puts("reallocing\n");
+
 	*buf = (unsigned char*) realloc(*buf, length);
-	puts("reallocced\n");
+
 	return length;
 }
 
@@ -118,7 +117,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	return length;
 }
 
-int llread(int fd, char *buffer){
+int llread(int fd, char **buffer){
 	//printf("preparing to read frame\n");
 	Command command = receiveCommand(fd);
 	puts("llread:received command");
@@ -159,8 +158,8 @@ int llread(int fd, char *buffer){
 
 			//accept the frame and confirm it
 			puts("llread: frame bcc ok, accepting\n");
-			buffer = (char*) malloc(length);
-			memcpy(buffer, command.data, length);
+			*buffer = (char*) malloc(length);
+			memcpy(*buffer, command.data, length);
 			while(!sendByte(fd,0x03, RR(!ll.sequenceNumber))){}
 			puts("llread: receiver ready sent, message confirmed\n");
 			ll.sequenceNumber = !ll.sequenceNumber;
@@ -178,7 +177,7 @@ int llread(int fd, char *buffer){
 	}
 
 	else{
-		printf("received unexpected command 0x%02x\n",command.command);
+		//printf("received unexpected command 0x%02x\n",command.command);
 		return E_GENERIC;
 	}
 
@@ -216,6 +215,7 @@ int sendByte(int fd, char address, char command){
 
 
 Command receiveCommand(int fd){
+	puts("receive command");
 	state currentState = WAIT_FLAG;
 	Command command;
 	command.data = (unsigned char*) malloc(1);
@@ -234,9 +234,10 @@ Command receiveCommand(int fd){
 				nullCommand.command = NONE;
 				return nullCommand;
 			}
+
 		}
 
-		printf("receiveCommand: received byte 0x%02x\n", byte);
+		//printf("receiveCommand: received byte 0x%02x\n", byte);
 		
 		switch(currentState){
 
@@ -287,7 +288,7 @@ Command receiveCommand(int fd){
 						continue;
 					}
 					
-					//printf("data byte received 0x%02x\n", byte);
+					printf("data byte received 0x%02x\n", byte);
 					command.data = realloc(command.data, ++command.size);
 
 					if (byte == ESCAPE && !escaped)
@@ -303,6 +304,7 @@ Command receiveCommand(int fd){
 				break;
 		}
 	}
+	puts("end receive command");
 	return command;
 }
 
@@ -404,7 +406,7 @@ send: ;
 
  	Command command = receiveCommand(fd);
 	
-	printf("0x%02x command\n", command.command);
+	//printf("0x%02x command\n", command.command);
 	
 	if(command.command == NONE){
 		

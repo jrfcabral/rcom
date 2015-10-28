@@ -108,7 +108,7 @@ int byteDeStuffing(unsigned char** buf, int length);
 int llopen(const char* port, int mode);
 int llwrite(int fd, unsigned char* buffer, int length);
 int llclose(int fd);
-int llread(int fd, char *buffer);
+int llread(int fd, char **buffer);
 int verifyBCC(unsigned char* data, int datalength, char correctBCC);
 int sendByte(int fd, char, char );
 Command receiveCommand(int fd);

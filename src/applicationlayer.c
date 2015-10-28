@@ -5,7 +5,22 @@
 //2- modo (SEND | RECEIVE)
 //3- filepath
 int main(int argc, char **argv){
+	
 
+	int porta = llopen("/dev/ttyS0", RECEIVE);
+	unsigned char* buffer;
+	
+	int j;
+	int n = 0;
+	while(n != E_CLOSED){
+	n = llread(porta, &buffer);
+	int i;
+	for(i=0;i<n;i++)
+		printf("%d, %c\n", i, buffer[i]);
+	}
+	if(porta < 1)
+		perror("");
+	exit(-1);
 	ll.timeOut = 10;
 	ll.sequenceNumber = 0; 
 	ll.numTransmissions  = 3;
