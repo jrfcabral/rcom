@@ -21,9 +21,20 @@ int main(int argc, char **argv){
 
 	*/
 	
+	int port = llopen(argv[1], SEND);
+	int i;	
+	for(i = 0; i < 100; i++){
+		llwrite(port, "ola~ bi~ba~", strlen("ola~ bi~ba~"));	
+	}
+	
+	llclose(port);
+
+	exit(-1);	
+
 	int mode = atoi(argv[2]);
 	if(argc != 4 ||( mode != SEND && mode != RECEIVE) || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
 		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
+		exit(-1);
 	}
 	int fd;
 	if (mode == SEND && (fd = open(argv[3], O_RDONLY)) == ENOENT){

@@ -34,16 +34,16 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 int byteDeStuffing(unsigned char** buf, int length) {
 	int i;
 	for(i=0; i < length;i++)
-		printf("%02x\n", buf[0][i]);
+		//printf("%02x\n", buf[0][i]);
 	
-	printf("length is %d\n", length);
+	//printf("length is %d\n", length);
 	
 
 	for (i = 0; i < length; i++){ 
 		if ((*buf)[i] == ESCAPE) {
 			memmove(*buf + i, *buf + i + 1, length - i - 1);
 			length--;
-printf("length is %d\n", length);
+//printf("length is %d\n", length);
 			(*buf)[i] ^= 0x20;
 		}
 	}
@@ -53,14 +53,14 @@ printf("length is %d\n", length);
 	return length;
 }
 
-char generateBCC(unsigned const char* buffer, const int length){
+char generateBCC(const char* buffer, const int length){
 	int i;
 	char bcc = 0;
 	for(i = 0; i < length; i++){
-		printf("%d, char %d, 0x%02x\n", i, buffer[i], bcc);
+		//printf("%d, char %d, 0x%02x\n", i, buffer[i], bcc);
 		bcc ^=buffer[i];
 	}
-	printf("generated bcc 0x%02x\n", bcc);
+	//printf("generated bcc 0x%02x\n", bcc);
 	return bcc;
 }
 
@@ -80,7 +80,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	int k;
 	puts("");
 	for (k=0;k<n;k++){
-		printf("\n%d\n", bufferStuffed[k]);
+		//printf("\n%d\n", bufferStuffed[k]);
 	}
 		puts("");
 	char* message = (char*)  malloc(n+6);
@@ -119,7 +119,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 }
 
 int llread(int fd, char *buffer){
-	printf("preparing to read frame\n");
+	//printf("preparing to read frame\n");
 	Command command = receiveCommand(fd);
 	puts("llread:received command");
 	int repeated;
@@ -128,8 +128,8 @@ int llread(int fd, char *buffer){
 	else if (command.command == I(!ll.sequenceNumber))
 		repeated = 1;
 	else if (command.command == DISC){
-			printf("llread: disconnecting\n");
-			while(!sendByte(fd, DISC, 0x01)){}
+			//printf("llread: disconnecting\n");
+			while(!sendByte(fd, 0x01, DISC)){}
 			puts("llread: disc confirmation sent\n");
 			command = receiveCommand(fd);
 			if (command.command != UA){
@@ -192,11 +192,11 @@ int verifyBCC(unsigned char* data, int datalength, char correctBCC){
 	int i;
 	for(i=0;i<datalength-1;i++){
 		actualBCC ^= data[i];
-		printf("%d, char: %d, bcc: 0x%02x\n", i, data[i], actualBCC);
+		//printf("%d, char: %d, bcc: 0x%02x\n", i, data[i], actualBCC);
 	}
 
 	if (actualBCC != correctBCC){
-		printf("calculated BCC to be 0x%02x, expected it to be 0x%02x\n", actualBCC, correctBCC);
+		//printf("calculated BCC to be 0x%02x, expected it to be 0x%02x\n", actualBCC, correctBCC);
 	}
 
 	return actualBCC == correctBCC;
@@ -287,7 +287,7 @@ Command receiveCommand(int fd){
 						continue;
 					}
 					
-					printf("data byte received 0x%02x\n", byte);
+					//printf("data byte received 0x%02x\n", byte);
 					command.data = realloc(command.data, ++command.size);
 
 					if (byte == ESCAPE && !escaped)
@@ -312,7 +312,9 @@ int llclose(int fd){
 		return -1;
 	puts("sent disc");
 	Command command = receiveCommand(fd);
+	puts("eu recebi um comandito\n");
 	if(command.command != DISC){
+		puts("didnt receive a disc");
 		return -1;
 	}
 	puts("received a disc");
@@ -369,7 +371,7 @@ int llopen(const char* port, int mode){
 			exit(-1);
 		}
 
-		printf("Ready to read\n");
+		//printf("Ready to read\n");
 
 	  Command command = receiveCommand(fd);
 		if(command.command == SET){
@@ -397,7 +399,7 @@ send: ;
 	unsigned char SET[5] = {FLAG, A_SEND, C_SET, SET[1]^SET[2], FLAG};
 	if(write(fd, SET, 5) != 5)
 	      return -1;
-	printf("escrevi\n");
+	//printf("escrevi\n");
 	alarm(ll.timeOut);
 
  	Command command = receiveCommand(fd);
