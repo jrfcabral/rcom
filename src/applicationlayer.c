@@ -94,7 +94,7 @@ int readFile(int port, int fd)
 {
 	ControlPacket packet;
 	while(!getControlPacket(port, &packet)){}
-
+	puts("recebi pacote de inicio");
 	if(packet.end != CONTROL_PACKET_BEGIN){
 		printf("readFile error: didn't receive expected start control package\n");
 		return -1;
@@ -125,8 +125,10 @@ int readFile(int port, int fd)
 }
 
 int getDataPacket(int port, DataPacket* packet){
-	char* buffer = NULL;
-	int length = llread(port, buffer);
+	char* buffer;
+	puts("vou ler um pacote");
+	int length = llread(port, &buffer);
+	puts("ja li");
 	if (length < 1)
 		return E_GENERIC;
 
@@ -141,24 +143,36 @@ int getDataPacket(int port, DataPacket* packet){
 }
 
 int getControlPacket(int port, ControlPacket* packet){
-	char* buffer = NULL;
-	int length = llread(port, buffer);
+	unsigned char* buffer;
+	puts("vou ler o controlo");
+	int length = llread(port, &buffer);
+	if(length == 0)
+		puts("fudeu");
+	puts("ta lido");
+	
+	
+		
 	if(length < 0)
 		return E_GENERIC;
 	if (buffer[0] != 1 && buffer[0] != 2)
 		return E_NOTCONTROL;
 	
 	packet-> end = buffer[0];
-	
-	int i = 3	;
-	int argSize = buffer[i];
-	memcpy(&packet->size, &buffer[i], argSize);
-	i+=argSize+1;
-	
-	argSize = buffer[i-1];
-	packet->filename = (char*) malloc(argSize);
-	memcpy(packet->filename, &buffer[i], argSize);
-	free(buffer);
+	int k;
+	for(	k=0;k<length;k++)
+		printf("0x%02x, %x\n",k,buffer[k]);
+
+	int size;
+	memcpy(&size, buffer+3, 4);
+	packet->size = size;
+	int filenameLength = buffer[8];
+	packet->filename = malloc(filenameLength+1);
+	int i;
+	for(i=0;i<filenameLength+1;i++){
+		packet->filename[i] = buffer[8+i];
+		printf("%c", buffer[8+i]);
+	}
+	puts("");
 	return length;
 }
 

@@ -31,10 +31,7 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 
 
 int byteDeStuffing(unsigned char** buf, int length) {
-	int i;
-	for(i=0; i < length;i++)
-		printf("%02x\n", buf[0][i]);
-	
+	int i;		
 	//printf("length is %d\n", length);
 	
 
@@ -171,6 +168,7 @@ int llread(int fd, char **buffer){
 			puts("llread: receiver ready sent, message confirmed\n");
 			ll.sequenceNumber = !ll.sequenceNumber;
 			free(command.data);
+			printf("%d length\n", length);
 			return length;
 
 		}
@@ -223,6 +221,7 @@ int sendByte(int fd, char address, char command){
 
 Command receiveCommand(int fd){
 	puts("receive command");
+	printf("fd is %d\n", fd);
 	state currentState = WAIT_FLAG;
 	Command command;
 	command.data = (unsigned char*) malloc(1);
@@ -232,7 +231,7 @@ Command receiveCommand(int fd){
 	int escaped = 0;
 
 	while(currentState != EXIT){
-		char byte;
+		unsigned char byte;
 
 		//puts("going to sleep\n");
 		while(!read(fd, &byte, 1)){
@@ -245,7 +244,7 @@ Command receiveCommand(int fd){
 
 		}
 
-		//printf("receiveCommand: received byte 0x%02x\n", byte);
+		printf("receiveCommand: received byte 0x%02x\n", byte);
 		
 		switch(currentState){
 
@@ -296,7 +295,7 @@ Command receiveCommand(int fd){
 						continue;
 					}
 					
-					printf("data byte received 0x%02x\n", byte);
+					printf("data byte received 0x%02x\n",(char) byte);
 					command.data = realloc(command.data, ++command.size);
 
 					if (byte == ESCAPE && !escaped)
