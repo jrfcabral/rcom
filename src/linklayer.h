@@ -47,6 +47,7 @@ The link layer is the group of methods and communications protocols that only op
 #define E_GENERIC -200
 #define E_AGAIN -300
 
+
 unsigned int info;
 /*FRAME FORMAT AND TYPES*/
 

@@ -81,8 +81,78 @@ int sendFile(int port, int fd)
 
 int readFile(int port, int fd)
 {
-	int size = getSize(fd);
+	ControlPacket packet;
+	while(!getControlPacket(port, &packet)){}
+
+	if(packet.end != CONTROL_PACKET_BEGIN){
+		printf("readFile error: didn't receive expected start control package\n");
+		return -1;
+	}
+	
+	int file = open(packet.filename, O_CREAT|O_TRUNC|O_WRONLY);
+	free(packet.filename);
+	DataPacket dataPacket;
+	int i;
+	int expectedSequenceNumber = 0;
+	for(i=0; i < packet.size;i++){
+		getDataPacket(port, &dataPacket);
+		if (expectedSequenceNumber != dataPacket.sequenceNumber){
+			printf("ReadFile: received packet with wrong sequence number. aborting.\n");
+			exit(-1);
+		}
+		expectedSequenceNumber++;
+		expectedSequenceNumber %= 255;
+		write(fd, dataPacket.data, dataPacket.size);
+	}
+		
+		while(!getControlPacket(port, &packet)){}
+	if(packet.end != CONTROL_PACKET_END){
+		printf("readFile error: didn't receive expected start control package\n");
+		return -1;
+	}
+		
 }
+
+int getDataPacket(int port, DataPacket* packet){
+	char* buffer = NULL;
+	int length = llread(port, buffer);
+	if (length < 1)
+		return E_GENERIC;
+
+	if(buffer[0] != DATA_PACKET)
+		return E_NOTDATA;
+	packet->sequenceNumber = buffer[1];
+	packet->size = (buffer[2] << 8 || buffer[3]);
+	packet->data = (char*) malloc(packet->size);
+	memcpy(packet->data, buffer+4, packet->size);
+	free(buffer);
+	return length;
+}
+
+int getControlPacket(int port, ControlPacket* packet){
+	char* buffer = NULL;
+	int length = llread(port, buffer);
+	if(length < 0)
+		return E_GENERIC;
+	if (buffer[0] != 1 && buffer[0] != 2)
+		return E_NOTCONTROL;
+	
+	packet-> end = buffer[0];
+	
+	int i = 3	;
+	int argSize = buffer[i];
+	memcpy(&packet->size, &buffer[i], argSize);
+	i+=argSize+1;
+	
+	argSize = buffer[i-1];
+	packet->filename = (char*) malloc(argSize);
+	memcpy(packet->filename, &buffer[i], argSize);
+	free(buffer);
+	return length;
+}
+
+
+
 
 unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* length){
 	unsigned char* packet = malloc(1+2+sizeof(unsigned int)+2+strlen(name));

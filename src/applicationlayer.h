@@ -10,10 +10,32 @@
 #define PACKET_SIZE 50
 #define TYPE_FILE_SIZE 0
 #define TYPE_FILE_NAME 1
+
+#define CONTROL_PACKET_BEGIN 1
+#define CONTROL_PACKET_END 2
+#define DATA_PACKET 0
+
+#define E_NOTCONTROL -400
+#define E_NOTDATA    -429
+
+typedef struct  {
+	char* filename;
+	int size;
+	int end;	
+} ControlPacket;
+
+typedef struct {
+	int sequenceNumber;
+	int size;
+	char* data;	
+} DataPacket;
+
+
 //function declarations
 int sendFile(int,int);
 int readFile(int,int);
 int getSize(int);
 unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* length);
+int getControlPacket(int port, ControlPacket* packet);
 
 
