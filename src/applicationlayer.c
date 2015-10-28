@@ -10,7 +10,7 @@ int main(int argc, char **argv){
 	ll.sequenceNumber = 0; 
 	ll.numTransmissions  = 3;
 	
-	int len;
+	//int len;
 	/*unsigned char buffer[] = "buffer de testerino munto bonito e q n vai dar erro pq e munto bonito e portanto a gente confia munto nele e tal e ta munto comprida esta msg fds.";
 	unsigned char *packet = makeDataPacket(strlen(buffer), buffer, &len);
 	printf("Length is %d\n", len);
@@ -119,7 +119,7 @@ int readFile(int port, int fd)
 		}
 		expectedSequenceNumber++;
 		expectedSequenceNumber %= 255;
-		write(fd, dataPacket.data, dataPacket.size);
+		write(file, dataPacket.data, dataPacket.size);
 	}
 		
 		while(!getControlPacket(port, &packet)){}
