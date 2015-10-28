@@ -9,8 +9,12 @@ int main(int argc, char **argv){
 	ll.timeOut = 10;
 	ll.sequenceNumber = 0; 
 	ll.numTransmissions  = 3;
-	
-	unsigned char* packet = makeControlPacket(15, "umficheirodebelonome",0);
+	int length;
+	unsigned char* packet = makeControlPacket(15, "umficheirodebelonome",0, &length);
+	int i;
+	for(i = 0; i < length; i++){
+		printf("%d, 0x%02x\n", i, packet[i]);
+	}
 	exit(0);
 	
 	int mode = atoi(argv[2]);
@@ -80,7 +84,7 @@ int readFile(int port, int fd)
 	int size = getSize(fd);
 }
 
-unsigned char* makeControlPacket(unsigned int size, char* name, int end){
+unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* length){
 	unsigned char* packet = malloc(1+2+sizeof(unsigned int)+2+strlen(name));
 	packet[0] = end;
 	packet[1] = TYPE_FILE_SIZE;
@@ -89,6 +93,7 @@ unsigned char* makeControlPacket(unsigned int size, char* name, int end){
 	packet[3+sizeof(unsigned int)] = TYPE_FILE_NAME;
 	packet[4+sizeof(unsigned int)] = strlen(name);
 	memcpy(&packet[5+sizeof(unsigned int)], name, strlen(name));
+	*length = 1+2+sizeof(unsigned int)+2+strlen(name);
 	return packet;		
 }
 

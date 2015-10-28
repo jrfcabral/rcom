@@ -14,6 +14,6 @@
 int sendFile(int,int);
 int readFile(int,int);
 int getSize(int);
-unsigned char* makeControlPacket(unsigned int size, char* name, int end);
+unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* length);
 
 
