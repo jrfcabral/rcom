@@ -5,46 +5,10 @@
 //2- modo (SEND | RECEIVE)
 //3- filepath
 int main(int argc, char **argv){
-	
 
-	int porta = llopen("/dev/ttyS0", RECEIVE);
-	unsigned char* buffer;
-	
-	int j;
-	int n = 0;
-	while(n != E_CLOSED){
-	n = llread(porta, &buffer);
-	int i;
-	for(i=0;i<n;i++)
-		printf("%d, %c\n", i, buffer[i]);
-	}
-	if(porta < 1)
-		perror("");
-	exit(-1);
 	ll.timeOut = 10;
 	ll.sequenceNumber = 0; 
 	ll.numTransmissions  = 3;
-	
-	//int len;
-	/*unsigned char buffer[] = "buffer de testerino munto bonito e q n vai dar erro pq e munto bonito e portanto a gente confia munto nele e tal e ta munto comprida esta msg fds.";
-	unsigned char *packet = makeDataPacket(strlen(buffer), buffer, &len);
-	printf("Length is %d\n", len);
-	int i;
-	for(i = 0; i < len; i++){
-		printf("%d: 0x%02x - %c\n", i, packet[i], packet[i]);
-	}		
-
-	*/
-	
-	int port = llopen(argv[1], SEND);
-	int i;	
-	for(i = 0; i < 100; i++){
-		llwrite(port, "ola~ bi~ba~", strlen("ola~ bi~ba~"));	
-	}
-	
-	llclose(port);
-
-	exit(-1);	
 
 	int mode = atoi(argv[2]);
 	if(argc != 4 ||( mode != SEND && mode != RECEIVE) || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
@@ -101,17 +65,21 @@ int sendFile(int port, int fd, char *fileName)
 	int length;
 
 	unsigned char* packet = makeControlPacket(size , fileName, 1, &length);
-	llwrite(fd, packet, length);
+	if(llwrite(fd, packet, length) < 0 )
+		return -1;
+		
 	int i = 0;
 	for(i = 0; i < (size/PACKET_SIZE); i++){
 		packet = makeDataPacket(PACKET_SIZE, buffer, &length);
-		llwrite(fd, packet, length);
+		if(llwrite(fd, packet, length) < 0 )
+			return -1;
 		buffer += PACKET_SIZE;
 	}
 	
 	if((size % PACKET_SIZE) != 0){
 		packet = makeDataPacket((size % PACKET_SIZE), buffer, &length);
-		llwrite(fd, packet, length);
+		if(llwrite(fd, packet, length) < 0 )
+			return -1;
 	}
 	
 	packet = makeControlPacket(size, fileName, 2, &length);

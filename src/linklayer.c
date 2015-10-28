@@ -96,12 +96,14 @@ int llwrite(int fd, unsigned char* buffer, int length){
 
 	free(message);
 	free(bufferStuffed);
-
+	alarm(3);
 	Command command = receiveCommand(fd);
 	//was asked for new frame
 	if (command.command == RR(!ll.sequenceNumber)){
 		ll.sequenceNumber = (!ll.sequenceNumber);
 		retries = 0;
+		puts("fui confirmado");
+		alarm(0);
 		return length;
 	}
 	//frame was rejected, resend
@@ -111,8 +113,10 @@ int llwrite(int fd, unsigned char* buffer, int length){
 		puts("byte was rejected,resending or no response\n");
 		return llwrite(fd, buffer, length);
 	}
-	else
+	else{
+		puts("eu esperei mas o reader nao me quis responder :(");
 		return -1;
+	}
 
 	return length;
 }
@@ -420,8 +424,10 @@ send: ;
 			goto send;
 		}
 	}
-	if (command.command == UA)
+	if (command.command == UA){
+		alarm(0);		
 		return fd;
+	}
 	return -1;
 	}
 	return 0;
