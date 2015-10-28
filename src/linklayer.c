@@ -4,42 +4,7 @@
 static unsigned char command_possible[] = {SET, UA, RR_1, RR_0, REJ_1, REJ_0, DISC, I_1, I_0 };
 
 
-int main(int argc, char **argv){
 
-	strcpy(ll.port, argv[1]);
-	int mode = atoi(argv[2]);
-	if(argc != 3 ||( mode != SEND && mode != RECEIVE)) {
-		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
-	}
-
-	ll.timeOut = 10;
-	ll.sequenceNumber = 0; 
-	ll.numTransmissions  = 3;
-
-	int fd = llopen(0, mode);
-	if(fd < 0)
-		return -1;
-	if(mode == SEND){
-		char message[] = "~~~";
-		char message2[] = "aaa";
-		char message3[] = "~a~";
-		llwrite(fd, message, strlen(message));
-		llwrite(fd, message2, strlen(message));
-		llwrite(fd, message3, strlen(message));
-		llclose(fd);
-	}
-
-	else if (mode == RECEIVE){
-	char *bufferino;
-		llread(fd, bufferino);
-		llread(fd, bufferino);
-		llread(fd, bufferino);
-		//free(bufferino);
-	}
-	return 0;
-
-
-}
 
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 	int n;
@@ -214,7 +179,10 @@ int llread(int fd, char *buffer){
 
 	else{
 		printf("received unexpected command 0x%02x\n",command.command);
+		return E_GENERIC;
 	}
+
+	return 0;
 
 
 }
@@ -355,14 +323,14 @@ int llclose(int fd){
 }
 
 
-int llopen(int port, int mode){
+int llopen(const char* port, int mode){
 
 
 	installAlarm();
 	int fd;
 
 	char fileName[15];
-	fd = open(ll.port, O_RDWR|O_NOCTTY);
+	fd = open(port, O_RDWR|O_NOCTTY);
 	if(fd <0){
 		perror(fileName);
 		exit(-1);
@@ -431,7 +399,7 @@ send: ;
 	      return -1;
 	printf("escrevi\n");
 	alarm(ll.timeOut);
-	state currentState = WAIT_FLAG;
+
  	Command command = receiveCommand(fd);
 	
 	printf("0x%02x command\n", command.command);
@@ -452,5 +420,6 @@ send: ;
 		return fd;
 	return -1;
 	}
+	return 0;
 }
 			
