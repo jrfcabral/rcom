@@ -65,7 +65,8 @@ char generateBCC(const char* buffer, const int length){
 
 
 int llwrite(int fd, unsigned char* buffer, int length){
-
+	
+	printf("entrei no llwrite\n");
 	char *bufferStuffed;
 	char header[] = { FLAG, 0x03, I(ll.sequenceNumber), header[1]^header[2] };
 	char dataBCC = generateBCC(buffer, length);
@@ -238,6 +239,7 @@ Command receiveCommand(int fd){
 			if (abort_send || resend){
 				Command nullCommand;
 				nullCommand.command = NONE;
+				resend = 0;
 				return nullCommand;
 			}
 
