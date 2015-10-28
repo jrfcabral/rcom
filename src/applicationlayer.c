@@ -9,13 +9,17 @@ int main(int argc, char **argv){
 	ll.timeOut = 10;
 	ll.sequenceNumber = 0; 
 	ll.numTransmissions  = 3;
-	int length;
-	unsigned char* packet = makeControlPacket(15, "umficheirodebelonome",0, &length);
+	
+	int len;
+	unsigned char buffer[] = "buffer de testerino munto bonito e q n vai dar erro pq e munto bonito e portanto a gente confia munto nele e tal e ta munto comprida esta msg fds.";
+	unsigned char *packet = makeDataPacket(strlen(buffer), buffer, &len);
+	printf("Length is %d\n", len);
 	int i;
-	for(i = 0; i < length; i++){
-		printf("%d, 0x%02x\n", i, packet[i]);
-	}
-	exit(0);
+	for(i = 0; i < len; i++){
+		printf("%d: 0x%02x - %c\n", i, packet[i], packet[i]);
+	}		
+
+	exit(-1);
 	
 	int mode = atoi(argv[2]);
 	if(argc != 4 ||( mode != SEND && mode != RECEIVE) || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
@@ -40,7 +44,7 @@ int main(int argc, char **argv){
 	int result;	
 	
 	if (mode == SEND){
-		result = sendFile(serialPort, fd);
+		result = sendFile(serialPort, fd, argv[1]);
 	}
 	else if (mode == RECEIVE){
 		result = readFile(serialPort, fd);
@@ -63,16 +67,29 @@ int getSize(int fd){
 	
 }
 
-int sendFile(int port, int fd)
+int sendFile(int port, int fd, char *fileName)
 {
 	int size = getSize(fd);
 	unsigned char* buffer = (unsigned char*) mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
 	
+	int length;
+
+	unsigned char* packet = makeControlPacket(size , fileName, 1, &length);
+	llwrite(fd, packet, length);
 	int i = 0;
 	for(i = 0; i < (size/PACKET_SIZE); i++){
-		
+		packet = makeDataPacket(PACKET_SIZE, buffer, &length);
+		llwrite(fd, packet, length);
+		buffer += PACKET_SIZE;
 	}
 	
+	if((size % PACKET_SIZE) != 0){
+		packet = makeDataPacket((size % PACKET_SIZE), buffer, &length);
+		llwrite(fd, packet, length);
+	}
+	
+	packet = makeControlPacket(size, fileName, 2, &length);
+	llwrite(fd, packet, length);
 	
 	
 	if(munmap(buffer, size))
@@ -95,5 +112,21 @@ unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* le
 	memcpy(&packet[5+sizeof(unsigned int)], name, strlen(name));
 	*length = 1+2+sizeof(unsigned int)+2+strlen(name);
 	return packet;		
+}
+
+unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length){
+	static int seqNum = 0;
+	
+	unsigned char *packet = (unsigned char *) malloc(4+packetSize);
+	packet[0] = 0;
+	packet[1] = seqNum++;
+	if(seqNum == 256)
+		seqNum = 0;
+	packet[2] = packetSize >> 8;
+	packet[3] = packetSize;
+	memcpy((packet+4), buffer, packetSize);
+	
+	*length = 4+packetSize;
+	return packet;
 }
 

@@ -11,9 +11,10 @@
 #define TYPE_FILE_SIZE 0
 #define TYPE_FILE_NAME 1
 //function declarations
-int sendFile(int,int);
+int sendFile(int,int, char*);
 int readFile(int,int);
 int getSize(int);
 unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* length);
+unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length);
 
 
