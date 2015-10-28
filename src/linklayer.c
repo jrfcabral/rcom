@@ -108,8 +108,10 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	}
 	//frame was rejected, resend
 	if (command.command == REJ(ll.sequenceNumber) || (command.command == NONE && ll.numTransmissions > retries)){
-		if (command.command == NONE)
+		if (command.command == NONE){
 			retries++;
+			alarm(0);
+		}
 		puts("byte was rejected,resending or no response\n");
 		return llwrite(fd, buffer, length);
 	}
