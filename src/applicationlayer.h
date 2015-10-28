@@ -32,10 +32,13 @@ typedef struct {
 
 
 //function declarations
-int sendFile(int,int);
+int sendFile(int,int, char*);
 int readFile(int,int);
 int getSize(int);
 unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* length);
 int getControlPacket(int port, ControlPacket* packet);
+unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length);
+int getDataPacket(int port, DataPacket* packet);
+
 
 

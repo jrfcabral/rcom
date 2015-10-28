@@ -53,7 +53,7 @@ printf("length is %d\n", length);
 	return length;
 }
 
-char generateBCC(const char* buffer, const int length){
+char generateBCC(unsigned const char* buffer, const int length){
 	int i;
 	char bcc = 0;
 	for(i = 0; i < length; i++){
@@ -65,7 +65,7 @@ char generateBCC(const char* buffer, const int length){
 }
 
 
-int llwrite(int fd, char* buffer, int length){
+int llwrite(int fd, unsigned char* buffer, int length){
 
 	char *bufferStuffed;
 	char header[] = { FLAG, 0x03, I(ll.sequenceNumber), header[1]^header[2] };
