@@ -39,6 +39,8 @@ unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* le
 int getControlPacket(int port, ControlPacket* packet);
 unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length);
 int getDataPacket(int port, DataPacket* packet);
+char *updateProgressBar(int completion, int totalSize);
+int printProgressBar(char *progressBar);
 
 
 
