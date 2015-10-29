@@ -81,7 +81,8 @@ int sendFile(int port, int fd, char *filePath)
 		return -1;
 	int i = 0;
 	int acum = 0;
-	char *proBar = updateProgressBar(acum, size);
+	float percentage;
+	char *proBar = updateProgressBar(acum, size, &percentage);
 	for(i = 0; i < (size/PACKET_SIZE); i++){
 		/*//printf("gonna send following packet of length %d: \n", length);
 		int j;
@@ -99,8 +100,10 @@ int sendFile(int port, int fd, char *filePath)
 			printf("#");
 			acum = 0;
 		}*/
-		proBar = updateProgressBar(acum, size);
-		printProgressBar(proBar);
+		proBar = updateProgressBar(acum, size, &percentage);
+		printProgressBar(proBar, percentage);
+		//printf("%.2f%%", percentage);
+		
 
 	}
 
@@ -115,8 +118,8 @@ int sendFile(int port, int fd, char *filePath)
 			return -1;
 		acum += (size % PACKET_SIZE);
 		
-		proBar = updateProgressBar(acum, size);
-		printProgressBar(proBar);
+		proBar = updateProgressBar(acum, size, &percentage);
+		printProgressBar(proBar, percentage);
 		printf("\n");
 		
 	}
@@ -265,29 +268,28 @@ unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length
 }
 
 
-char *updateProgressBar(int completion, int totalSize){
-	float num = (((float)completion/(float)totalSize)*100);
-	//printf("%f\n", num);
-	char *progressBar = (char *)malloc(58);
+char *updateProgressBar(int completion, int totalSize, float *percentage){
+	float num = (((float)completion/(float)totalSize)*100)/2.0;
+	*percentage = num*2.0;
+	char *progressBar = (char *)malloc(51);
 	progressBar[0] = '[';
-	progressBar[52] = ']';
+	progressBar[51] = ']';
 	int i;
-	for(i = 1; i <= 51; i++){
+	for(i = 1; i < 51; i++){
 		if(num-- > 0){
 			progressBar[i] = '#';
 		}
 		else
 			progressBar[i] = '-';
 	}
-	progressBar[53] = 0;
 
 	return progressBar;
 }
 
-int printProgressBar(char *progressBar){
-	printf("%s", progressBar);
+int printProgressBar(char *progressBar, float perc){
+	printf("%s%.2f%%", progressBar, perc);
 	int i;
-	for(i = 0; i <= 52; i++){
+	for(i = 0; i <= 60; i++){
 		printf("\b");
 	}
 	return 0;
