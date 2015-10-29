@@ -150,6 +150,9 @@ int readFile(int port)
 	free(packet.filename);
 	DataPacket dataPacket;
 	unsigned char expectedSequenceNumber = 0;
+	float percentage;
+	int acum = 0;
+	char * proBar = updateProgressBar(0, packet.size, &percentage);
 	while(getDataPacket(port, &dataPacket) != E_NOTDATA){
 
 		if (expectedSequenceNumber != dataPacket.sequenceNumber){
@@ -161,10 +164,15 @@ int readFile(int port)
 		
 		//printf("data packet with size %d\n", dataPacket.size);
 		write(file, dataPacket.data, dataPacket.size);
+		acum += dataPacket.size;
+		proBar = updateProgressBar(acum, packet.size, &percentage);
+		printProgressBar(proBar, percentage);
+
 	}
+	printf("\n");
 	char* dump;
 	while(llread(port, &dump) != E_CLOSED){}	
-	puts("discei");
+	//puts("discei");
 	return 0;
 }
 
@@ -271,7 +279,7 @@ unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length
 char *updateProgressBar(int completion, int totalSize, float *percentage){
 	float num = (((float)completion/(float)totalSize)*100)/2.0;
 	*percentage = num*2.0;
-	char *progressBar = (char *)malloc(51);
+	char *progressBar = (char *)malloc(52);
 	progressBar[0] = '[';
 	progressBar[51] = ']';
 	int i;
@@ -282,6 +290,7 @@ char *updateProgressBar(int completion, int totalSize, float *percentage){
 		else
 			progressBar[i] = '-';
 	}
+	progressBar[52] = 0;
 
 	return progressBar;
 }
@@ -289,6 +298,7 @@ char *updateProgressBar(int completion, int totalSize, float *percentage){
 int printProgressBar(char *progressBar, float perc){
 	printf("%s%.2f%%", progressBar, perc);
 	int i;
+
 	for(i = 0; i <= 60; i++){
 		printf("\b");
 	}

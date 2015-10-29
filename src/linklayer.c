@@ -124,57 +124,57 @@ int llwrite(int fd, unsigned char* buffer, int length){
 int llread(int fd, char **buffer){
 	//printf("preparing to read frame\n");
 	Command command = receiveCommand(fd);
-	puts("llread:received command");
+	//puts("llread:received command");
 	int repeated;
 	if (command.command == I(ll.sequenceNumber))
 		repeated = 0;
 	else if (command.command == I(!ll.sequenceNumber))
 		repeated = 1;
 	else if (command.command == DISC){
-			printf("llread: disconnecting\n");
+			//printf("llread: disconnecting\n");
 			while(!sendByte(fd, 0x01, DISC)){}
-			puts("llread: disc confirmation sent\n");
+			//puts("llread: disc confirmation sent\n");
 			command = receiveCommand(fd);
 			if (command.command != UA){
-				puts("llread: didnt receive UA after disc confirmation\n");
+				//puts("llread: didnt receive UA after disc confirmation\n");
 				return E_GENERIC;
 			}
 			else{
-				puts("llread: connection successfully closed\n");
+				//puts("llread: connection successfully closed\n");
 				return E_CLOSED;
 			}
 	}
 
 	if (command.command == I(0) || command.command == I(1)){
-		puts("llread: received a data frame\n");
+		//puts("llread: received a data frame\n");
 		//if we never saw this frame before, consider it
 		if(!repeated){
-			puts("llread: new data frame\n");
+			//puts("llread: new data frame\n");
 			int length = byteDeStuffing(&(command.data), command.size);
-			puts("llread: destuffing succeeded\n");
+			//puts("llread: destuffing succeeded\n");
 			int bccOK = verifyBCC(command.data, length, command.data[length-1]);
 			//Reject frames with wrong BCC
 			if(!bccOK){
-				puts("llread: frame was damaged, rejecting and rereading\n");
+				//puts("llread: frame was damaged, rejecting and rereading\n");
 				while(!sendByte(fd, 0x03, REJ(ll.sequenceNumber) )){}
 					return llread(fd, buffer);
 			}
 
 			//accept the frame and confirm it
-			puts("llread: frame bcc ok, accepting\n");
+			//puts("llread: frame bcc ok, accepting\n");
 			*buffer = (char*) malloc(length);
 			memcpy(*buffer, command.data, length);
 			while(!sendByte(fd,0x03, RR(!ll.sequenceNumber))){}
-			puts("llread: receiver ready sent, message confirmed\n");
+			//puts("llread: receiver ready sent, message confirmed\n");
 			ll.sequenceNumber = !ll.sequenceNumber;
 			free(command.data);
-			printf("%d length\n", length);
+			//printf("%d length\n", length);
 			return length;
 
 		}
 		//this frame is repeated. Confirm it and ask for the new frame
 		else{
-				puts("llread: message repeated");
+				//puts("llread: message repeated");
 				while(!sendByte(fd, 0x03, RR(ll.sequenceNumber))){}
 				return E_GENERIC;
 		}
