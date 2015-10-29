@@ -8,14 +8,14 @@ int main(int argc, char **argv){
 
 	//int fdesc = llopen(argv[1], SEND);
 	//exit(-1);
-	
+
 
 	ll.timeOut = 10;
-	ll.sequenceNumber = 0; 
+	ll.sequenceNumber = 0;
 	ll.numTransmissions  = 3;
 
 	int mode = atoi(argv[2]);
-	if(argc != 4 ||( mode != SEND && mode != RECEIVE) || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
+	if(argc != 4 ||( mode != SEND && mode != RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
 		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 		exit(-1);
 	}
@@ -27,9 +27,9 @@ int main(int argc, char **argv){
 	else if (mode == RECEIVE && (fd = open(argv[3], (O_RDWR | O_CREAT | O_TRUNC))) < 0){
 		perror("");
 		exit(-1);
-	}	
-	
-	
+	}
+
+
 	/*char test[] = "/bin/src/testerino.xd";
 	char *coise = malloc(strlen(test));
 	coise = basename(test);
@@ -40,9 +40,9 @@ int main(int argc, char **argv){
 		perror("");
 		exit(-1);
 	}
-	
-	int result;	
-	
+
+	int result;
+
 
 
 	if (mode == SEND){
@@ -67,7 +67,7 @@ int getSize(int fd){
 	if (fstat(fd, &info))
 		return -1;
 	return info.st_size;
-	
+
 }
 
 int sendFile(int port, int fd, char *filePath)
@@ -88,7 +88,7 @@ int sendFile(int port, int fd, char *filePath)
 		}*/
 	if(llwrite(port, packet, length) < 0 )
 		return -1;
-		
+
 	int i = 0;
 	for(i = 0; i < (size/PACKET_SIZE); i++){
 		/*printf("gonna send following packet of length %d: \n", length);
@@ -97,15 +97,15 @@ int sendFile(int port, int fd, char *filePath)
 			printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
 		}*/
 		packet = makeDataPacket(PACKET_SIZE, buffer, &length);
-		
+
 		if(llwrite(port, packet, length) < 0 )
 			return -1;
 		buffer += PACKET_SIZE;
 	}
-	
+
 	if((size % PACKET_SIZE) != 0){
-		/*packet = makeDataPacket((size % PACKET_SIZE), buffer, &length);
-		printf("gonna send following packet of length %d: \n", length);
+		packet = makeDataPacket((size % PACKET_SIZE), buffer, &length);
+		/*printf("gonna send following packet of length %d: \n", length);
 		int j;
 		for(j = 0; j < length; j++){
 			printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
@@ -113,15 +113,17 @@ int sendFile(int port, int fd, char *filePath)
 		if(llwrite(port, packet, length) < 0 )
 			return -1;
 	}
-	
+
 	packet = makeControlPacket(size, filePath, 2, &length);
-	llwrite(port, packet, length);	
+	llwrite(port, packet, length);
 
 
 	llclose(port);
-	
+
 	if(munmap(buffer, size) == -1)
 		perror("failed to unmap the file");
+
+		return 0;
 }
 
 int readFile(int port, int fd)
@@ -133,19 +135,18 @@ int readFile(int port, int fd)
 		printf("readFile error: didn't receive expected start control package\n");
 		return -1;
 	}
-	
+
 	int file = open(packet.filename, O_CREAT|O_TRUNC|O_WRONLY);
 	free(packet.filename);
 	DataPacket dataPacket;
-	int i;
 	int expectedSequenceNumber = 0;
 	while(getDataPacket(port, &dataPacket) != E_NOTDATA){
-		
+
 		expectedSequenceNumber++;
 		expectedSequenceNumber %= 255;
 		printf("data packet with size %d\n", dataPacket.size);
 		write(file, dataPacket.data, dataPacket.size);
-	}	
+	}
 	puts("recebi pacote final");
 	return 0;
 }
@@ -156,7 +157,7 @@ int getDataPacket(int port, DataPacket* packet){
 	if (length < 1)
 		return E_GENERIC;
 
-	
+
 
 	if(buffer[0] != DATA_PACKET && buffer[0] == CONTROL_PACKET_END){
 		printf("lalalalala %02x lalala\n", buffer[0]);
@@ -174,16 +175,16 @@ int getDataPacket(int port, DataPacket* packet){
 }
 
 int getControlPacket(int port, ControlPacket* packet){
-	unsigned char* buffer;
-	int length = llread(port, &buffer);	
+	 char* buffer;
+	int length = llread(port, &buffer);
 
-	
-		
+
+
 	if(length < 0)
 		return E_GENERIC;
 	if (buffer[0] != 1 && buffer[0] != 2)
 		return E_NOTCONTROL;
-	
+
 	packet-> end = buffer[0];
 	int k;
 	for(	k=0;k<length;k++)
@@ -211,10 +212,10 @@ unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* le
 	for(i = strlen(name); i > 0; i--){
 		if(name[i] == '/'){
 			stopper = i+1	;
-		}		
+		}
 	}
 	char *actualName = (char *)malloc(strlen(name) - stopper + 1);
-	
+
 	for(i = 0; i < (strlen(name) - stopper); i++){
 		actualName[i] = name[stopper+i];
 	}
@@ -228,12 +229,12 @@ unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* le
 	packet[4+sizeof(unsigned int)] = strlen(actualName)+1;
 	memcpy(&packet[5+sizeof(unsigned int)], actualName, strlen(actualName)+1);
 	*length = 1+2+sizeof(unsigned int)+2+strlen(actualName)+1;
-	return packet;		
+	return packet;
 }
 
 unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length){
 	static int seqNum = 0;
-	
+
 	unsigned char *packet = (unsigned char *) malloc(4+packetSize);
 	packet[0] = 0;
 	packet[1] = seqNum++;
@@ -243,8 +244,7 @@ unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length
 	packet[3] = packetSize;
 	printf("packetSize %x, packet[2] %x packet[3] %x\n", packetSize, packet[2], packet[3]);
 	memcpy((packet+4), buffer, packetSize);
-	
+
 	*length = 4+packetSize;
 	return packet;
 }
-

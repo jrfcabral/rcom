@@ -22,8 +22,8 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 			stuffedBuffer[0][newLength-1] = buffer[n];
 		}
 	}
-	
-	
+
+
 
 	return newLength;
 
@@ -31,11 +31,11 @@ int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
 
 
 int byteDeStuffing(unsigned char** buf, int length) {
-	int i;		
+	int i;
 	//printf("length is %d\n", length);
-	
 
-	for (i = 0; i < length; i++){ 
+
+	for (i = 0; i < length; i++){
 		if ((*buf)[i] == ESCAPE) {
 			memmove(*buf + i, *buf + i + 1, length - i - 1);
 			length--;
@@ -62,15 +62,15 @@ char generateBCC(const char* buffer, const int length){
 
 
 int llwrite(int fd, unsigned char* buffer, int length){
-	
+
 	printf("entrei no llwrite\n");
 	char *bufferStuffed;
 	char header[] = { FLAG, 0x03, I(ll.sequenceNumber), header[1]^header[2] };
-	char dataBCC = generateBCC(buffer, length);
+	char dataBCC = generateBCC((char*)buffer, length);
 	char* toStuff = malloc(length+1);
 	memcpy(toStuff, buffer, length);
 	toStuff[length] = dataBCC;
- 
+
 
 	int n= byteStuffing(toStuff,  length+1, &bufferStuffed);
 
@@ -227,7 +227,7 @@ Command receiveCommand(int fd){
 	command.data = (unsigned char*) malloc(1);
 	command.size = 0;
 	int isCommand = 0;
-	int j;		
+	int j;
 	int escaped = 0;
 
 	while(currentState != EXIT){
@@ -245,7 +245,7 @@ Command receiveCommand(int fd){
 		}
 
 		//printf("receiveCommand: received byte %c\n", byte);
-		
+
 		switch(currentState){
 
 			case WAIT_FLAG:
@@ -294,7 +294,7 @@ Command receiveCommand(int fd){
 						currentState = EXIT;
 						continue;
 					}
-					
+
 					//printf("data byte received 0x%02x\n",(char) byte);
 					command.data = realloc(command.data, ++command.size);
 
@@ -412,27 +412,26 @@ send: ;
 	alarm(ll.timeOut);
 
  	Command command = receiveCommand(fd);
-	
+
 	//printf("0x%02x command\n", command.command);
-	
+
 	if(command.command == NONE){
-		
+
 		retries++;
 		if (ll.numTransmissions < retries){
 			puts("llopen_writer timeouts exceeded");
 			return -1;
 		}
-		else{ 
+		else{
 			puts("llopen_writer timeout");
 			goto send;
 		}
 	}
 	if (command.command == UA){
-		alarm(0);		
+		alarm(0);
 		return fd;
 	}
 	return -1;
 	}
 	return 0;
 }
-			
