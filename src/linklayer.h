@@ -66,7 +66,7 @@ typedef enum {
 
 typedef enum {
 	SET = 0x07, //set up
-	UA = 0x03,  //unnumbered acknowledgement
+	UA = 0x03,  //unumbered acknowledgement
 	RR_1 = 0x21,  //receiver ready
 	RR_0 = 0x20,
 	REJ_1 = 0x25,
@@ -99,8 +99,16 @@ typedef struct {
 	unsigned int size;
 } Command;
 
+typedef struct {
+	unsigned int dataFramesTransmitted;
+	unsigned int timeouts;
+	unsigned int rejs;
+	
+} Stats;
+
 
 LinkLayer ll;
+Stats stat;
 
 //declarations
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer);

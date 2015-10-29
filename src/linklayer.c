@@ -88,6 +88,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	int wrote = 0;
 	while(!wrote)
 		wrote = write(fd, message, n+5);
+	stat.dataFramesTransmitted++:
 
 
 //puts("message sent\n");
@@ -335,7 +336,9 @@ int llclose(int fd){
 
 int llopen(const char* port, int mode){
 
-
+	stat.dataFramesTransmitted = 0;
+	stat.timeouts=0;
+	stat.rejs=0;
 	installAlarm();
 	int fd;
 
