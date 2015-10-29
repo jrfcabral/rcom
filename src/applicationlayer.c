@@ -78,6 +78,7 @@ int sendFile(int port, int fd, char *filePath)
 		//printf("did not mmap\n");
 		exit(-1);
 	}
+	unsigned char *bufferBckup = buffer;
 	int length;
 
 	unsigned char* packet = makeControlPacket(size , filePath, 1, &length);
@@ -128,7 +129,7 @@ printf("[..................................................]\b\b\b\b\b\b\b\b\b\b
 
 	llclose(port);
 
-	if(munmap(buffer, size) == -1)
+	if(munmap(bufferBckup, size) == -1)
 		perror("failed to unmap the file");
 
 		return 0;
