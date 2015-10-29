@@ -437,3 +437,10 @@ send: ;
 	}
 	return 0;
 }
+
+void printStatistics(){
+	FILE* file = fopen("statistics.log", "w+");
+	fprintf(file, "Number of data frames written: %d\n Number of rejected frames: %d\n Number of timeouts: %d\n", stats.dataFramesTransmitted, stats.rejs, stats.timeouts);
+	fclose(file);
+			
+}

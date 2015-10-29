@@ -120,3 +120,4 @@ int llread(int fd, unsigned char **buffer);
 int verifyBCC(unsigned char* data, int datalength, char correctBCC);
 int sendByte(int fd, char, char );
 Command receiveCommand(int fd);
+void printStatistics(void);
