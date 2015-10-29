@@ -119,37 +119,34 @@ int readFile(int port, int fd)
 	DataPacket dataPacket;
 	int i;
 	int expectedSequenceNumber = 0;
-	for(i=0; i < packet.size;i++){
-		getDataPacket(port, &dataPacket);
-		if (expectedSequenceNumber != dataPacket.sequenceNumber){
-			printf("ReadFile: received packet with wrong sequence number. aborting.\n");
-			exit(-1);
-		}
+	while(getDataPacket(port, &dataPacket) != E_NOTDATA){
+		
 		expectedSequenceNumber++;
 		expectedSequenceNumber %= 255;
+		printf("data packet with size %d\n", dataPacket.size);
 		write(file, dataPacket.data, dataPacket.size);
-	}
-		
-		while(!getControlPacket(port, &packet)){}
-	if(packet.end != CONTROL_PACKET_END){
-		printf("readFile error: didn't receive expected start control package\n");
-		return -1;
-	}
-		
+	}	
+	puts("recebi pacote final");
+	return 0;
 }
 
 int getDataPacket(int port, DataPacket* packet){
 	char* buffer;
-	puts("vou ler um pacote");
 	int length = llread(port, &buffer);
-	puts("ja li");
 	if (length < 1)
 		return E_GENERIC;
 
-	if(buffer[0] != DATA_PACKET)
+	
+
+	if(buffer[0] != DATA_PACKET && buffer[0] == CONTROL_PACKET_END){
+		printf("lalalalala %02x lalala\n", buffer[0]);
 		return E_NOTDATA;
+
+	}
 	packet->sequenceNumber = buffer[1];
-	packet->size = (buffer[2] << 8 || buffer[3]);
+	packet->size = 0x00;
+	packet->size+= buffer[3];
+	packet->size+= buffer[2]*16;
 	packet->data = (char*) malloc(packet->size);
 	memcpy(packet->data, buffer+4, packet->size);
 	free(buffer);
@@ -158,12 +155,8 @@ int getDataPacket(int port, DataPacket* packet){
 
 int getControlPacket(int port, ControlPacket* packet){
 	unsigned char* buffer;
-	puts("vou ler o controlo");
-	int length = llread(port, &buffer);
-	if(length == 0)
-		puts("fudeu");
-	puts("ta lido");
-	
+	int length = llread(port, &buffer);	
+
 	
 		
 	if(length < 0)

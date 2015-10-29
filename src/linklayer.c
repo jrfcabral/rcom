@@ -244,7 +244,7 @@ Command receiveCommand(int fd){
 
 		}
 
-		printf("receiveCommand: received byte 0x%02x\n", byte);
+		//printf("receiveCommand: received byte %c\n", byte);
 		
 		switch(currentState){
 
@@ -295,7 +295,7 @@ Command receiveCommand(int fd){
 						continue;
 					}
 					
-					printf("data byte received 0x%02x\n",(char) byte);
+					//printf("data byte received 0x%02x\n",(char) byte);
 					command.data = realloc(command.data, ++command.size);
 
 					if (byte == ESCAPE && !escaped)
