@@ -144,7 +144,7 @@ int readFile(int port, int fd)
 		return -1;
 	}
 
-	int file = open(packet.filename, O_CREAT|O_TRUNC|O_WRONLY);
+	int file = open(packet.filename+1, O_CREAT|O_TRUNC|O_WRONLY, 0666);
 	free(packet.filename);
 	DataPacket dataPacket;
 	int expectedSequenceNumber = 0;
