@@ -24,12 +24,6 @@ setbuf(stdout, NULL);
 		perror("");
 		exit(-1);
 	}
-	
-
-	/*char test[] = "/bin/src/testerino.xd";
-	char *coise = malloc(strlen(test));
-	coise = basename(test);
-	//puts(coise);*/
 
 	int serialPort = llopen(argv[1], mode);
 	if (serialPort < 0){
@@ -144,11 +138,16 @@ int readFile(int port)
 	int file = open(packet.filename+1, O_CREAT|O_TRUNC|O_WRONLY, 0666);
 	free(packet.filename);
 	DataPacket dataPacket;
-	int expectedSequenceNumber = 0;
+	unsigned char expectedSequenceNumber = 0;
 	while(getDataPacket(port, &dataPacket) != E_NOTDATA){
 
+		if (expectedSequenceNumber != dataPacket.sequenceNumber){
+			printf("error in packet sequence: expected packet no %u and got packet no %u\n", expectedSequenceNumber, dataPacket.sequenceNumber);
+		exit(-1);
+		}
 		expectedSequenceNumber++;
 		expectedSequenceNumber %= 255;
+		
 		//printf("data packet with size %d\n", dataPacket.size);
 		write(file, dataPacket.data, dataPacket.size);
 	}

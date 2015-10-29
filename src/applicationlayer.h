@@ -25,7 +25,7 @@ typedef struct  {
 } ControlPacket;
 
 typedef struct {
-	int sequenceNumber;
+	unsigned char sequenceNumber;
 	int size;
 	char* data;	
 } DataPacket;
