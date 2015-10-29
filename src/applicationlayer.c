@@ -8,7 +8,7 @@ int main(int argc, char **argv){
 
 	//int fdesc = llopen(argv[1], SEND);
 	//exit(-1);
-
+setbuf(stdout, NULL);
 
 	ll.timeOut = 10;
 	ll.sequenceNumber = 0;
@@ -88,8 +88,9 @@ int sendFile(int port, int fd, char *filePath)
 		}*/
 	if(llwrite(port, packet, length) < 0 )
 		return -1;
-
+printf("[..................................................]\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
 	int i = 0;
+	int acum = 0;
 	for(i = 0; i < (size/PACKET_SIZE); i++){
 		/*//printf("gonna send following packet of length %d: \n", length);
 		int j;
@@ -101,6 +102,13 @@ int sendFile(int port, int fd, char *filePath)
 		if(llwrite(port, packet, length) < 0 )
 			return -1;
 		buffer += PACKET_SIZE;
+
+		acum += PACKET_SIZE;
+		if((float)acum/(float)size >= 0.02){
+			printf("#");
+			acum = 0;
+		}
+
 	}
 
 	if((size % PACKET_SIZE) != 0){
@@ -190,7 +198,7 @@ int getControlPacket(int port, ControlPacket* packet){
 	for(	k=0;k<length;k++){
 		//printf("0x%02x, %x\n",k,buffer[k]);
 	}
-	
+
 	int size;
 	memcpy(&size, buffer+3, 4);
 	packet->size = size;

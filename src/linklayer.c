@@ -75,11 +75,11 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	int n= byteStuffing(toStuff,  length+1, &bufferStuffed);
 
 	int k;
-	puts("");
+	//puts("");
 	for (k=0;k<n;k++){
 		//printf("\n%d\n", bufferStuffed[k]);
 	}
-		puts("");
+	//	puts("");
 	char* message = (char*)  malloc(n+6);
 
 	memcpy(message, header, 4);
