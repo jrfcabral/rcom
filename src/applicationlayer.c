@@ -6,6 +6,10 @@
 //3- filepath
 int main(int argc, char **argv){
 
+	//int fdesc = llopen(argv[1], SEND);
+	//exit(-1);
+	
+
 	ll.timeOut = 10;
 	ll.sequenceNumber = 0; 
 	ll.numTransmissions  = 3;
@@ -70,37 +74,53 @@ int sendFile(int port, int fd, char *filePath)
 {
 	int size = getSize(fd);
 	unsigned char* buffer = (unsigned char*) mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
-	
+	if(buffer == MAP_FAILED){
+		printf("did not mmap\n");
+		exit(-1);
+	}
 	int length;
 
 	unsigned char* packet = makeControlPacket(size , filePath, 1, &length);
 	printf("gonna send following packet of length %d: \n", length);
-		int j;
+		/*int j;
 		for(j = 0; j < length; j++){
 			printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
-		}
+		}*/
 	if(llwrite(port, packet, length) < 0 )
 		return -1;
 		
 	int i = 0;
 	for(i = 0; i < (size/PACKET_SIZE); i++){
+		/*printf("gonna send following packet of length %d: \n", length);
+		int j;
+		for(j = 0; j < length; j++){
+			printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
+		}*/
 		packet = makeDataPacket(PACKET_SIZE, buffer, &length);
+		
 		if(llwrite(port, packet, length) < 0 )
 			return -1;
 		buffer += PACKET_SIZE;
 	}
 	
 	if((size % PACKET_SIZE) != 0){
-		packet = makeDataPacket((size % PACKET_SIZE), buffer, &length);
+		/*packet = makeDataPacket((size % PACKET_SIZE), buffer, &length);
+		printf("gonna send following packet of length %d: \n", length);
+		int j;
+		for(j = 0; j < length; j++){
+			printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
+		}*/
 		if(llwrite(port, packet, length) < 0 )
 			return -1;
 	}
 	
 	packet = makeControlPacket(size, filePath, 2, &length);
-	llwrite(fd, packet, length);
+	llwrite(port, packet, length);	
+
+
+	llclose(port);
 	
-	
-	if(munmap(buffer, size))
+	if(munmap(buffer, size) == -1)
 		perror("failed to unmap the file");
 }
 
@@ -224,10 +244,11 @@ unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length
 	unsigned char *packet = (unsigned char *) malloc(4+packetSize);
 	packet[0] = 0;
 	packet[1] = seqNum++;
-	if(seqNum == 256)
+	if(seqNum == 255)
 		seqNum = 0;
 	packet[2] = packetSize >> 8;
 	packet[3] = packetSize;
+	printf("packetSize %x, packet[2] %x packet[3] %x\n", packetSize, packet[2], packet[3]);
 	memcpy((packet+4), buffer, packetSize);
 	
 	*length = 4+packetSize;
