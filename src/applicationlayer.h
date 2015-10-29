@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#define PACKET_SIZE 50
+#define PACKET_SIZE 100
 #define TYPE_FILE_SIZE 0
 #define TYPE_FILE_NAME 1
 
@@ -39,8 +39,8 @@ unsigned char* makeControlPacket(unsigned int size, char* name, int end, int* le
 int getControlPacket(int port, ControlPacket* packet);
 unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length);
 int getDataPacket(int port, DataPacket* packet);
-char *updateProgressBar(int completion, int totalSize);
-int printProgressBar(char *progressBar);
+char *updateProgressBar(int completion, int totalSize, float *percentage);
+int printProgressBar(char *progressBar, float);
 
 
 
