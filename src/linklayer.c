@@ -131,7 +131,7 @@ int llread(int fd, char **buffer){
 	else if (command.command == I(!ll.sequenceNumber))
 		repeated = 1;
 	else if (command.command == DISC){
-			//printf("llread: disconnecting\n");
+			printf("llread: disconnecting\n");
 			while(!sendByte(fd, 0x01, DISC)){}
 			puts("llread: disc confirmation sent\n");
 			command = receiveCommand(fd);

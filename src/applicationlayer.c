@@ -155,7 +155,9 @@ int readFile(int port, int fd)
 		//printf("data packet with size %d\n", dataPacket.size);
 		write(file, dataPacket.data, dataPacket.size);
 	}
-	//puts("recebi pacote final");
+	char* dump;
+	while(llread(port, &dump) != E_CLOSED){}	
+	puts("discei");
 	return 0;
 }
 
