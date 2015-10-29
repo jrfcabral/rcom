@@ -20,7 +20,7 @@
 
 typedef struct  {
 	char* filename;
-	int size;
+	unsigned int size;
 	int end;	
 } ControlPacket;
 

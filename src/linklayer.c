@@ -88,7 +88,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	int wrote = 0;
 	while(!wrote)
 		wrote = write(fd, message, n+5);
-	stat.dataFramesTransmitted++:
+	stats.dataFramesTransmitted++;
 
 
 //puts("message sent\n");
@@ -122,7 +122,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	return length;
 }
 
-int llread(int fd, char **buffer){
+int llread(int fd, unsigned char **buffer){
 	//printf("preparing to read frame\n");
 	Command command = receiveCommand(fd);
 	//puts("llread:received command");
@@ -163,7 +163,7 @@ int llread(int fd, char **buffer){
 
 			//accept the frame and confirm it
 			//puts("llread: frame bcc ok, accepting\n");
-			*buffer = (char*) malloc(length);
+			*buffer = (unsigned char*) malloc(length);
 			memcpy(*buffer, command.data, length);
 			while(!sendByte(fd,0x03, RR(!ll.sequenceNumber))){}
 			//puts("llread: receiver ready sent, message confirmed\n");
@@ -336,9 +336,9 @@ int llclose(int fd){
 
 int llopen(const char* port, int mode){
 
-	stat.dataFramesTransmitted = 0;
-	stat.timeouts=0;
-	stat.rejs=0;
+	stats.dataFramesTransmitted = 0;
+	stats.timeouts=0;
+	stats.rejs=0;
 	installAlarm();
 	int fd;
 

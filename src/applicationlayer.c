@@ -13,12 +13,16 @@ setbuf(stdout, NULL);
 	ll.timeOut = 10;
 	ll.sequenceNumber = 0;
 	ll.numTransmissions  = 3;
-
-	int mode = atoi(argv[2]);
+	int mode;
+	if(argc >= 3)
+		mode = atoi(argv[2]);
+	else 
+		exit(-1);
 	if( (argc != 4 && mode == SEND) || (argc!=3 && mode == RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
 		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 		exit(-1);
 	}
+
 	int fd;
 	if (mode == SEND && (fd = open(argv[3], O_RDONLY)) == ENOENT){
 		perror("");
@@ -170,14 +174,14 @@ int readFile(int port)
 
 	}
 	printf("\n");
-	char* dump;
+	unsigned char* dump;
 	while(llread(port, &dump) != E_CLOSED){}	
 	//puts("discei");
 	return 0;
 }
 
 int getDataPacket(int port, DataPacket* packet){
-	char* buffer;
+	unsigned char* buffer;
 	int length = llread(port, &buffer);
 	if (length < 1)
 		return E_GENERIC;
@@ -192,7 +196,8 @@ int getDataPacket(int port, DataPacket* packet){
 	packet->sequenceNumber = buffer[1];
 	packet->size = 0x00;
 	packet->size+= buffer[3];
-	packet->size+= buffer[2]*16;
+	packet->size+= buffer[2]*256;
+	printf("%d packet size\n", packet->size);	
 	packet->data = (char*) malloc(packet->size);
 	memcpy(packet->data, buffer+4, packet->size);
 	free(buffer);
@@ -200,7 +205,7 @@ int getDataPacket(int port, DataPacket* packet){
 }
 
 int getControlPacket(int port, ControlPacket* packet){
-	 char* buffer;
+	unsigned char* buffer;
 	int length = llread(port, &buffer);
 
 
@@ -279,7 +284,7 @@ unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length
 char *updateProgressBar(int completion, int totalSize, float *percentage){
 	float num = (((float)completion/(float)totalSize)*100)/2.0;
 	*percentage = num*2.0;
-	char *progressBar = (char *)malloc(52);
+	char *progressBar = (char *)malloc(53);
 	progressBar[0] = '[';
 	progressBar[51] = ']';
 	int i;
