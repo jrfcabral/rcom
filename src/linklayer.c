@@ -63,7 +63,7 @@ char generateBCC(const char* buffer, const int length){
 
 int llwrite(int fd, unsigned char* buffer, int length){
 
-	printf("entrei no llwrite\n");
+//printf("entrei no llwrite\n");
 	char *bufferStuffed;
 	char header[] = { FLAG, 0x03, I(ll.sequenceNumber), header[1]^header[2] };
 	char dataBCC = generateBCC((char*)buffer, length);
@@ -90,7 +90,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 		wrote = write(fd, message, n+5);
 
 
-	puts("message sent\n");
+//puts("message sent\n");
 
 	free(message);
 	free(bufferStuffed);
@@ -100,7 +100,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	if (command.command == RR(!ll.sequenceNumber)){
 		ll.sequenceNumber = (!ll.sequenceNumber);
 		retries = 0;
-		puts("fui confirmado");
+	//puts("fui confirmado");
 		alarm(0);
 		return length;
 	}
@@ -212,7 +212,7 @@ int sendByte(int fd, char address, char command){
 	int wrote = write(fd, FRAME, 5);
 	if(!wrote)
 		return -1;
-	puts("FRAME with command %02x sent\n");
+	//	puts("FRAME with command %02x sent\n");
 	return 1;
 
 }
@@ -220,8 +220,8 @@ int sendByte(int fd, char address, char command){
 
 
 Command receiveCommand(int fd){
-	puts("receive command");
-	printf("fd is %d\n", fd);
+	//puts("receive command");
+//printf("fd is %d\n", fd);
 	state currentState = WAIT_FLAG;
 	Command command;
 	command.data = (unsigned char*) malloc(1);
@@ -310,8 +310,7 @@ Command receiveCommand(int fd){
 				exit(-3);
 				break;
 		}
-	}
-	puts("end receive command");
+	}//	puts("end receive command");
 	return command;
 }
 
@@ -319,14 +318,14 @@ int llclose(int fd){
 	alarm(0);
 	if(!sendByte(fd, A_SEND, C_DISC))
 		return -1;
-	puts("sent disc");
+//puts("sent disc");
 	Command command = receiveCommand(fd);
-	puts("eu recebi um comandito\n");
+	//puts("eu recebi um comandito\n");
 	if(command.command != DISC){
-		puts("didnt receive a disc");
+		//puts("didnt receive a disc");
 		return -1;
 	}
-	puts("received a disc");
+	//puts("received a disc");
 	if(!sendByte(fd, A_RECEIVE, C_UA))
 		return -1;
 	puts("confirmed");

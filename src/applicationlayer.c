@@ -16,7 +16,7 @@ int main(int argc, char **argv){
 
 	int mode = atoi(argv[2]);
 	if(argc != 4 ||( mode != SEND && mode != RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
-		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
+		//printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 		exit(-1);
 	}
 	int fd;
@@ -33,7 +33,7 @@ int main(int argc, char **argv){
 	/*char test[] = "/bin/src/testerino.xd";
 	char *coise = malloc(strlen(test));
 	coise = basename(test);
-	puts(coise);*/
+	//puts(coise);*/
 
 	int serialPort = llopen(argv[1], mode);
 	if (serialPort < 0){
@@ -75,26 +75,26 @@ int sendFile(int port, int fd, char *filePath)
 	int size = getSize(fd);
 	unsigned char* buffer = (unsigned char*) mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
 	if(buffer == MAP_FAILED){
-		printf("did not mmap\n");
+		//printf("did not mmap\n");
 		exit(-1);
 	}
 	int length;
 
 	unsigned char* packet = makeControlPacket(size , filePath, 1, &length);
-	printf("gonna send following packet of length %d: \n", length);
+	//printf("gonna send following packet of length %d: \n", length);
 		/*int j;
 		for(j = 0; j < length; j++){
-			printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
+			//printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
 		}*/
 	if(llwrite(port, packet, length) < 0 )
 		return -1;
 
 	int i = 0;
 	for(i = 0; i < (size/PACKET_SIZE); i++){
-		/*printf("gonna send following packet of length %d: \n", length);
+		/*//printf("gonna send following packet of length %d: \n", length);
 		int j;
 		for(j = 0; j < length; j++){
-			printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
+			//printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
 		}*/
 		packet = makeDataPacket(PACKET_SIZE, buffer, &length);
 
@@ -105,10 +105,10 @@ int sendFile(int port, int fd, char *filePath)
 
 	if((size % PACKET_SIZE) != 0){
 		packet = makeDataPacket((size % PACKET_SIZE), buffer, &length);
-		/*printf("gonna send following packet of length %d: \n", length);
+		/*//printf("gonna send following packet of length %d: \n", length);
 		int j;
 		for(j = 0; j < length; j++){
-			printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
+			//printf("%d: 0x%02x - %c\n", j, packet[j], packet[j]);
 		}*/
 		if(llwrite(port, packet, length) < 0 )
 			return -1;
@@ -130,9 +130,9 @@ int readFile(int port, int fd)
 {
 	ControlPacket packet;
 	while(!getControlPacket(port, &packet)){}
-	puts("recebi pacote de inicio");
+	//puts("recebi pacote de inicio");
 	if(packet.end != CONTROL_PACKET_BEGIN){
-		printf("readFile error: didn't receive expected start control package\n");
+		//printf("readFile error: didn't receive expected start control package\n");
 		return -1;
 	}
 
@@ -144,10 +144,10 @@ int readFile(int port, int fd)
 
 		expectedSequenceNumber++;
 		expectedSequenceNumber %= 255;
-		printf("data packet with size %d\n", dataPacket.size);
+		//printf("data packet with size %d\n", dataPacket.size);
 		write(file, dataPacket.data, dataPacket.size);
 	}
-	puts("recebi pacote final");
+	//puts("recebi pacote final");
 	return 0;
 }
 
@@ -160,7 +160,7 @@ int getDataPacket(int port, DataPacket* packet){
 
 
 	if(buffer[0] != DATA_PACKET && buffer[0] == CONTROL_PACKET_END){
-		printf("lalalalala %02x lalala\n", buffer[0]);
+		//printf("lalalalala %02x lalala\n", buffer[0]);
 		return E_NOTDATA;
 
 	}
@@ -187,9 +187,10 @@ int getControlPacket(int port, ControlPacket* packet){
 
 	packet-> end = buffer[0];
 	int k;
-	for(	k=0;k<length;k++)
-		printf("0x%02x, %x\n",k,buffer[k]);
-
+	for(	k=0;k<length;k++){
+		//printf("0x%02x, %x\n",k,buffer[k]);
+	}
+	
 	int size;
 	memcpy(&size, buffer+3, 4);
 	packet->size = size;
@@ -198,9 +199,9 @@ int getControlPacket(int port, ControlPacket* packet){
 	int i;
 	for(i=0;i<filenameLength+1;i++){
 		packet->filename[i] = buffer[8+i];
-		printf("%c", buffer[8+i]);
+		//printf("%c", buffer[8+i]);
 	}
-	puts("");
+	//puts("");
 	return length;
 }
 
@@ -242,7 +243,7 @@ unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length
 		seqNum = 0;
 	packet[2] = packetSize >> 8;
 	packet[3] = packetSize;
-	printf("packetSize %x, packet[2] %x packet[3] %x\n", packetSize, packet[2], packet[3]);
+	//printf("packetSize %x, packet[2] %x packet[3] %x\n", packetSize, packet[2], packet[3]);
 	memcpy((packet+4), buffer, packetSize);
 
 	*length = 4+packetSize;
