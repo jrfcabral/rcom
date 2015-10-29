@@ -15,8 +15,8 @@ setbuf(stdout, NULL);
 	ll.numTransmissions  = 3;
 
 	int mode = atoi(argv[2]);
-	if(argc != 4 ||( mode != SEND && mode != RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
-		//printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
+	if( (argc != 4 && mode == SEND) || (argc!=3&&mode != RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
+		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 		exit(-1);
 	}
 	int fd;
@@ -24,11 +24,7 @@ setbuf(stdout, NULL);
 		perror("");
 		exit(-1);
 	}
-	else if (mode == RECEIVE && (fd = open(argv[3], (O_RDWR | O_CREAT | O_TRUNC))) < 0){
-		perror("");
-		exit(-1);
-	}
-
+	
 
 	/*char test[] = "/bin/src/testerino.xd";
 	char *coise = malloc(strlen(test));
@@ -50,7 +46,7 @@ setbuf(stdout, NULL);
 		result = sendFile(serialPort, fd, argv[3]);
 	}
 	else if (mode == RECEIVE){
-		result = readFile(serialPort, fd);
+		result = readFile(serialPort);
 	}
 
 	if(result){
@@ -135,7 +131,7 @@ printf("[..................................................]\b\b\b\b\b\b\b\b\b\b
 		return 0;
 }
 
-int readFile(int port, int fd)
+int readFile(int port)
 {
 	ControlPacket packet;
 	while(!getControlPacket(port, &packet)){}
