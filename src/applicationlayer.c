@@ -15,7 +15,7 @@ setbuf(stdout, NULL);
 	ll.numTransmissions  = 3;
 
 	int mode = atoi(argv[2]);
-	if( (argc != 4 && mode == SEND) || (argc!=3&&mode != RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
+	if( (argc != 4 && mode == SEND) || (argc!=3 && mode == RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
 		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
 		exit(-1);
 	}
@@ -79,9 +79,9 @@ int sendFile(int port, int fd, char *filePath)
 		}*/
 	if(llwrite(port, packet, length) < 0 )
 		return -1;
-printf("[..................................................]\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
 	int i = 0;
 	int acum = 0;
+	char *proBar = updateProgressBar(acum, size);
 	for(i = 0; i < (size/PACKET_SIZE); i++){
 		/*//printf("gonna send following packet of length %d: \n", length);
 		int j;
@@ -95,10 +95,12 @@ printf("[..................................................]\b\b\b\b\b\b\b\b\b\b
 		buffer += PACKET_SIZE;
 
 		acum += PACKET_SIZE;
-		if((float)acum/(float)size >= 0.02){
+		/*if((float)acum/(float)size >= 0.02){
 			printf("#");
 			acum = 0;
-		}
+		}*/
+		proBar = updateProgressBar(acum, size);
+		printProgressBar(proBar);
 
 	}
 
@@ -111,6 +113,12 @@ printf("[..................................................]\b\b\b\b\b\b\b\b\b\b
 		}*/
 		if(llwrite(port, packet, length) < 0 )
 			return -1;
+		acum += (size % PACKET_SIZE);
+		
+		proBar = updateProgressBar(acum, size);
+		printProgressBar(proBar);
+		printf("\n");
+		
 	}
 
 	packet = makeControlPacket(size, filePath, 2, &length);
@@ -254,4 +262,33 @@ unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length
 
 	*length = 4+packetSize;
 	return packet;
+}
+
+
+char *updateProgressBar(int completion, int totalSize){
+	float num = (((float)completion/(float)totalSize)*100);
+	//printf("%f\n", num);
+	char *progressBar = (char *)malloc(58);
+	progressBar[0] = '[';
+	progressBar[52] = ']';
+	int i;
+	for(i = 1; i <= 51; i++){
+		if(num-- > 0){
+			progressBar[i] = '#';
+		}
+		else
+			progressBar[i] = '-';
+	}
+	progressBar[53] = 0;
+
+	return progressBar;
+}
+
+int printProgressBar(char *progressBar){
+	printf("%s", progressBar);
+	int i;
+	for(i = 0; i <= 52; i++){
+		printf("\b");
+	}
+	return 0;
 }
