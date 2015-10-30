@@ -139,10 +139,11 @@ int sendFile(int port, int fd, char *filePath)
 		proBar = updateProgressBar(acum, size, &percentage);
 		if(visMode != 0)
 			printProgressBar(proBar, percentage);
-		printf("\n");
+		
 		
 	}
 
+	printf("\n");
 	packet = makeControlPacket(size, filePath, 2, &length);
 	llwrite(port, packet, length);
 
