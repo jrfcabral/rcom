@@ -122,5 +122,5 @@ int verifyBCC(unsigned char* data, int datalength, char correctBCC);
 int sendByte(int fd, char, char );
 Command receiveCommand(int fd);
 void printStatistics(int);
-
+int getRand();
 

@@ -161,8 +161,9 @@ int llread(int fd, unsigned char **buffer){
 			//puts("llread: destuffing succeeded\n");
 			int bccOK = verifyBCC(command.data, length, command.data[length-1]);
 
-			if(getRand() != 55){
+			if(getRand() == 55){
 				bccOK = 0;
+				puts("rejecting good packet");
 			}
 
 			//Reject frames with wrong BCC
