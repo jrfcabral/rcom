@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#define PACKET_SIZE 100
+int PACKET_SIZE = 100;
 #define TYPE_FILE_SIZE 0
 #define TYPE_FILE_NAME 1
 
@@ -41,6 +41,7 @@ unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length
 int getDataPacket(int port, DataPacket* packet);
 char *updateProgressBar(int completion, int totalSize, float *percentage);
 int printProgressBar(char *progressBar, float);
-
+int printTutorial();
+int parseParams(char *params);
 
 

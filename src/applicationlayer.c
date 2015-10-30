@@ -1,6 +1,8 @@
 #include "linklayer.h"
 #include "applicationlayer.h"
 
+int visMode = 1;
+
 //1- porta
 //2- modo (SEND | RECEIVE)
 //3- filepath
@@ -8,20 +10,35 @@ int main(int argc, char **argv){
 
 	//int fdesc = llopen(argv[1], SEND);
 	//exit(-1);
-setbuf(stdout, NULL);
+	setbuf(stdout, NULL);
 
-	ll.timeOut = 10;
+	ll.timeOut = 3;
 	ll.sequenceNumber = 0;
 	ll.numTransmissions  = 3;
 	int mode;
+
+	if(argc == 2 && !strcmp("--help", argv[1])){
+		printTutorial();
+		exit(0);
+	}
+
 	if(argc >= 3)
 		mode = atoi(argv[2]);
 	else 
 		exit(-1);
-	if( (argc != 4 && mode == SEND) || (argc!=3 && mode == RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
-		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
+	if( (argc < 4 && mode == SEND) || (argc<3 && mode == RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
+		printf("Usage: %s /dev/ttySx or /dev/pts/x  0 to send or 1 to read file path(if executed as sender)\n x = port num\nFor more info use %s --help", argv[0], argv[0]);
 		exit(-1);
 	}
+
+	if((argc > 4 && mode == SEND) || (argc > 3 && mode == RECEIVE)){
+		int i;
+		for(i = 0; i < argc-(mode==SEND?4:3); i++){
+			if(parseParams(argv[i+(mode==SEND?4:3)]) == -1)
+				return -1;
+		}
+	}	
+	
 
 	int fd;
 	if (mode == SEND && (fd = open(argv[3], O_RDONLY)) == ENOENT){
@@ -100,13 +117,9 @@ int sendFile(int port, int fd, char *filePath)
 		buffer += PACKET_SIZE;
 
 		acum += PACKET_SIZE;
-		/*if((float)acum/(float)size >= 0.02){
-			printf("#");
-			acum = 0;
-		}*/
 		proBar = updateProgressBar(acum, size, &percentage);
-		printProgressBar(proBar, percentage);
-		//printf("%.2f%%", percentage);
+		if(visMode != 0)
+			printProgressBar(proBar, percentage);
 		
 
 	}
@@ -123,7 +136,8 @@ int sendFile(int port, int fd, char *filePath)
 		acum += (size % PACKET_SIZE);
 		
 		proBar = updateProgressBar(acum, size, &percentage);
-		printProgressBar(proBar, percentage);
+		if(visMode != 0)
+			printProgressBar(proBar, percentage);
 		printf("\n");
 		
 	}
@@ -144,9 +158,9 @@ int readFile(int port)
 {
 	ControlPacket packet;
 	while(!getControlPacket(port, &packet)){}
-	//puts("recebi pacote de inicio");
+	//puts("\nGot beginning packet");
 	if(packet.end != CONTROL_PACKET_BEGIN){
-		//printf("readFile error: didn't receive expected start control package\n");
+		printf("Error: didn't receive expected start control package\n");
 		return -1;
 	}
 
@@ -160,17 +174,18 @@ int readFile(int port)
 	while(getDataPacket(port, &dataPacket) != E_NOTDATA){
 
 		if (expectedSequenceNumber != dataPacket.sequenceNumber){
-			printf("error in packet sequence: expected packet no %u and got packet no %u\n", expectedSequenceNumber, dataPacket.sequenceNumber);
+			printf("Error in packet sequence: expected packet no %u and got packet no %u\n", expectedSequenceNumber, dataPacket.sequenceNumber);
 		exit(-1);
 		}
 		expectedSequenceNumber++;
 		expectedSequenceNumber %= 255;
 		
-		//printf("data packet with size %d\n", dataPacket.size);
+		//printf("Received data packet with size %d\n", dataPacket.size);
 		write(file, dataPacket.data, dataPacket.size);
 		acum += dataPacket.size;
 		proBar = updateProgressBar(acum, packet.size, &percentage);
-		printProgressBar(proBar, percentage);
+		if(visMode != 0)
+			printProgressBar(proBar, percentage);
 
 	}
 	printf("\n");
@@ -197,7 +212,7 @@ int getDataPacket(int port, DataPacket* packet){
 	packet->size = 0x00;
 	packet->size+= buffer[3];
 	packet->size+= buffer[2]*256;
-	printf("%d packet size\n", packet->size);	
+	//printf("%d packet size\n", packet->size);	
 	packet->data = (char*) malloc(packet->size);
 	memcpy(packet->data, buffer+4, packet->size);
 	free(buffer);
@@ -308,4 +323,75 @@ int printProgressBar(char *progressBar, float perc){
 		printf("\b");
 	}
 	return 0;
+}
+
+int printTutorial(){
+	printf("Available options: \n");
+	printf("-q:\tMakes the program run quietly (i.e no output is shown)\n");	
+	printf("-b=[num]:\tChanges the baudrate to num. Default is %d\nWARNING: If the receiver's baudrate is significantly lower than the sender's, it might cause the program to fail.\n", BAUDRATE);
+	printf("-m=[num]:\tSets the number of times the program will try to transmit the same frame before exiting. Default is 3\n");
+	printf("-t=[num]:\tSets the time (in seconds) the sender will wait for a response before resending the current frame. Default is 3.\n");
+	printf("-p=[num]:\tSets the number of data bytes sent per package. Default is 100.\n");
+	return 0;	
+}
+
+int parseParams(char *param){
+	
+		if(!strncmp("-b", param, 2)){
+			char *temp = malloc(3);
+			memcpy(temp, (param+3), strlen(param)-3);
+			ll.baudRate = atoi(temp);
+			if(ll.baudRate < 1){
+				printf("\nError: Baudrate cannot be negative or 0.\n");
+				return -1;
+			}
+			//printf("\nBaudrate changed\n");
+		}
+		else if(!strncmp("-m", param, 2)){
+			char *temp = malloc(3);
+			memcpy(temp, (param+3), strlen(param)-3);
+			ll.numTransmissions = atoi(temp);
+			if(ll.numTransmissions < 1){
+				printf("\nError: Number of retries cannot be negative or 0.\n");
+				return -1;
+			}
+			//printf("\nnumTransmissions changed\n");
+			
+		}
+
+		else if(!strncmp("-t", param, 2)){
+			char *temp = malloc(3);
+			memcpy(temp, (param+3), strlen(param)-3);
+			ll.timeOut = atoi(temp);
+			if(ll.timeOut < 1){
+				printf("\nError: Timeout cannot be negative or 0.\n");
+				return -1;
+			}
+			//printf("\ntimeOut changed to %d\n", ll.timeOut);
+			
+		}
+
+		else if(!strncmp("-p", param, 2)){
+			char *temp = malloc(3);
+			memcpy(temp, (param+3), strlen(param)-3);
+			PACKET_SIZE = atoi(temp);
+			if(PACKET_SIZE < 1){
+				printf("\nError: Packet size cannot be negative or 0.\n");
+				return -1;
+			}
+			//printf("\nPACKET_SIZE changed to %d\n", PACKET_SIZE);
+			
+		}
+
+		else if(!strncmp("-q", param, 2)){
+			visMode = 0;
+		}
+
+		else{
+			printf("Error: Unknown option %s\n", param);
+			return -1;
+		}
+	
+	return 0;
+
 }
