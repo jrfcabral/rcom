@@ -25,8 +25,9 @@ int main(int argc, char **argv){
 	if(argc >= 3){
 		if(!strcmp(argv[2], "send"))
 			mode = 0;
-		else if(!strcmp(argv[2], "receive"))
+		else if(!strcmp(argv[2], "receive")){
 			mode = 1;
+		}
 		else{
 			printUsage(argv[0]);
 			exit(-1);
@@ -196,6 +197,7 @@ int readFile(int port)
 		proBar = updateProgressBar(acum, packet.size, &percentage);
 		if(visMode != 0)
 			printProgressBar(proBar, percentage);
+		free(dataPacket.data);
 
 	}
 	printf("\n");
@@ -208,13 +210,16 @@ int readFile(int port)
 int getDataPacket(int port, DataPacket* packet){
 	unsigned char* buffer;
 	int length = llread(port, &buffer);
-	if (length < 1)
+	if (length < 1){
+		free(buffer);
 		return E_GENERIC;
+	}
 
 
 
 	if(buffer[0] != DATA_PACKET && buffer[0] == CONTROL_PACKET_END){
 		//printf("lalalalala %02x lalala\n", buffer[0]);
+		free(buffer);
 		return E_NOTDATA;
 
 	}
@@ -235,10 +240,14 @@ int getControlPacket(int port, ControlPacket* packet){
 
 
 
-	if(length < 0)
+	if(length < 0){
+		free(buffer);
 		return E_GENERIC;
-	if (buffer[0] != 1 && buffer[0] != 2)
+	}
+	if (buffer[0] != 1 && buffer[0] != 2){
+		free(buffer);
 		return E_NOTCONTROL;
+	}
 
 	packet-> end = buffer[0];
 	int k;
@@ -257,6 +266,7 @@ int getControlPacket(int port, ControlPacket* packet){
 		//printf("%c", buffer[8+i]);
 	}
 	//puts("");
+	free(buffer);
 	return length;
 }
 
