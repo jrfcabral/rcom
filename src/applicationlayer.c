@@ -158,7 +158,7 @@ int readFile(int port)
 {
 	ControlPacket packet;
 	while(!getControlPacket(port, &packet)){}
-	puts("\nGot beginning packet");
+	//puts("\nGot beginning packet");
 	if(packet.end != CONTROL_PACKET_BEGIN){
 		printf("Error: didn't receive expected start control package\n");
 		return -1;
