@@ -95,7 +95,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 
 	free(message);
 	free(bufferStuffed);
-	alarm(3);
+	alarm(ll.timeOut);
 	Command command = receiveCommand(fd);
 	//was asked for new frame
 	if (command.command == RR(!ll.sequenceNumber)){

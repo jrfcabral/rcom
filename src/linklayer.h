@@ -85,7 +85,7 @@ typedef struct{
 	int baudRate;
 	int sequenceNumber; //frame sequece number
 	int timeOut; //timeout value
-	int numTransmissions; //number of retries if it fails
+	int numTransmissions; //number of retries until it fails
 	int currentTries;
 	struct termios oldtio, newtio;
 

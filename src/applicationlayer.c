@@ -8,20 +8,34 @@ int main(int argc, char **argv){
 
 	//int fdesc = llopen(argv[1], SEND);
 	//exit(-1);
-setbuf(stdout, NULL);
+	setbuf(stdout, NULL);
 
-	ll.timeOut = 10;
+	ll.timeOut = 3;
 	ll.sequenceNumber = 0;
 	ll.numTransmissions  = 3;
 	int mode;
+
+	if(argc == 2 && !strcmp("--help", argv[1])){
+		printTutorial();
+		exit(0);
+	}
+
 	if(argc >= 3)
 		mode = atoi(argv[2]);
 	else 
 		exit(-1);
-	if( (argc != 4 && mode == SEND) || (argc!=3 && mode == RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
-		printf("Usage: %s /dev/ttySx\n x = port num\n", argv[0]);
+	if( (argc < 4 && mode == SEND) || (argc<3 && mode == RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
+		printf("Usage: %s /dev/ttySx or /dev/pts/x  0 to send or 1 to read file path(if executed as sender)\n x = port num\nFor more info use %s --help", argv[0], argv[0]);
 		exit(-1);
 	}
+
+	if((argc > 4 && mode == SEND) || (argc > 3 && mode == RECEIVE)){
+		int i;
+		for(i = 0; i < argc-(mode==SEND?4:3); i++){
+			parseParams(argv[i+(mode==SEND?4:3)]);
+		}
+	}	
+	
 
 	int fd;
 	if (mode == SEND && (fd = open(argv[3], O_RDONLY)) == ENOENT){
@@ -197,7 +211,7 @@ int getDataPacket(int port, DataPacket* packet){
 	packet->size = 0x00;
 	packet->size+= buffer[3];
 	packet->size+= buffer[2]*256;
-	printf("%d packet size\n", packet->size);	
+	//printf("%d packet size\n", packet->size);	
 	packet->data = (char*) malloc(packet->size);
 	memcpy(packet->data, buffer+4, packet->size);
 	free(buffer);
@@ -308,4 +322,51 @@ int printProgressBar(char *progressBar, float perc){
 		printf("\b");
 	}
 	return 0;
+}
+
+int printTutorial(){
+	printf("Available options: \n");
+	printf("-b=[num]\tChanges the baudrate to num. Default is %d\nWARNING: If the receiver's baudrate is significantly lower than the sender's, it might cause the program to fail.\n", BAUDRATE);
+	printf("-m=[num]\tSets the number of times the program will try to transmit the same frame before exiting. Default is 3\n");
+	printf("-t=[num]\tSets the time (in seconds) the sender will wait for a response before resending the current frame. Default is 3.\n");
+
+	return 0;	
+}
+
+int parseParams(char *param){
+	
+		if(!strncmp("-b", param, 2)){
+			char *temp = malloc(3);
+			memcpy(temp, (param+3), 2);
+			ll.baudRate = atoi(temp);
+			if(ll.baudRate < 1){
+				printf("\nError: Baudrate cannot be negative or 0.\n");
+			}
+			printf("\nBaudrate changed\n");
+			return -1;
+		}
+		else if(!strncmp("-m", param, 2)){
+			char *temp = malloc(3);
+			memcpy(temp, (param+3), 2);
+			ll.numTransmissions = atoi(temp);
+			if(ll.numTransmissions < 1){
+				printf("\nError: Number of retries cannot be negative or 0.\n");
+			}
+			printf("\nnumTransmissions changed\n");
+			return -1;
+		}
+
+		else if(!strncmp("-t", param, 2)){
+			char *temp = malloc(3);
+			memcpy(temp, (param+3), 2);
+			ll.timeOut = atoi(temp);
+			if(ll.timeOut < 1){
+				printf("\nError: Timeout cannot be negative or 0.\n");
+			}
+			printf("\ntimeOut changed to %d\n", ll.timeOut);
+			return -1;
+		}
+	
+	return 0;
+
 }

@@ -41,6 +41,7 @@ unsigned char *makeDataPacket(int packetSize, unsigned char *buffer, int *length
 int getDataPacket(int port, DataPacket* packet);
 char *updateProgressBar(int completion, int totalSize, float *percentage);
 int printProgressBar(char *progressBar, float);
-
+int printTutorial();
+int parseParams(char *params);
 
 
