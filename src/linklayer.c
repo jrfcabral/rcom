@@ -164,7 +164,7 @@ int llread(int fd, unsigned char **buffer){
 
 			if(getRand() < RANDOM_REJ_CHANCE){
 				bccOK = 0;
-				puts("\n randomly rejecting good packet");
+			//	puts("\n randomly rejecting good packet");
 			}
 
 			//Reject frames with wrong BCC
