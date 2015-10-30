@@ -117,6 +117,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 			alarm(0);
 		}
 		//puts("byte was rejected,resending or no response\n");
+		stats.rejs++;
 		return llwrite(fd, buffer, length);
 	}
 	else{
@@ -161,16 +162,18 @@ int llread(int fd, unsigned char **buffer){
 			//puts("llread: destuffing succeeded\n");
 			int bccOK = verifyBCC(command.data, length, command.data[length-1]);
 
-			if(getRand() == 55){
+			if(getRand() < 5){
 				bccOK = 0;
-				puts("rejecting good packet");
+				puts("\n randomly rejecting good packet");
 			}
 
 			//Reject frames with wrong BCC
 			if(!bccOK){
 				//puts("llread: frame was damaged, rejecting and rereading\n");
+				stats.rejs++;
 				while(!sendByte(fd, 0x03, REJ(ll.sequenceNumber) )){}
 					return llread(fd, buffer);
+
 			}
 
 			//accept the frame and confirm it
@@ -347,7 +350,7 @@ int llclose(int fd){
 
 
 int llopen(const char* port, int mode){
-
+	srand(time(NULL));
 	stats.dataFramesTransmitted = 0;
 	stats.timeouts=0;
 	stats.rejs=0;
@@ -457,7 +460,7 @@ void printStatistics(int visMode){
 }
 
 int getRand(){
-	srand(time(NULL));
+
 	int r = rand() % 100 + 1;
 	return r;
 }
