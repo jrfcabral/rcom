@@ -22,12 +22,20 @@ int main(int argc, char **argv){
 		exit(0);
 	}
 
-	if(argc >= 3)
-		mode = atoi(argv[2]);
+	if(argc >= 3){
+		if(!strcmp(argv[2], "send"))
+			mode = 0;
+		else if(!strcmp(argv[2], "receive"))
+			mode = 1;
+		else{
+			printUsage(argv[0]);
+			exit(-1);
+		}
+	}
 	else 
 		exit(-1);
-	if( (argc < 4 && mode == SEND) || (argc<3 && mode == RECEIVE)){// || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
-		printf("Usage: %s /dev/ttySx or /dev/pts/x  0 to send or 1 to read file path(if executed as sender)\n x = port num\nFor more info use %s --help", argv[0], argv[0]);
+	if( (argc < 4 && mode == SEND) || (argc<3 && mode == RECEIVE) || strncmp(argv[1], "/dev/ttyS", strlen("dev/ttyS"))) {
+		printUsage(argv[0]);
 		exit(-1);
 	}
 
@@ -396,5 +404,10 @@ int parseParams(char *param){
 	
 	return 0;
 
+}
+
+int printUsage(char *arg){
+	printf("Usage: %s /dev/ttySx or /dev/pts/x  0 to send or 1 to read file path(if executed as sender)\n x = port num\nFor more info use %s --help\n", arg, arg);
+	return 0;
 }
 

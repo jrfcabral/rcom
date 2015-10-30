@@ -43,5 +43,6 @@ char *updateProgressBar(int completion, int totalSize, float *percentage);
 int printProgressBar(char *progressBar, float);
 int printTutorial();
 int parseParams(char *params);
+int printUsage(char *arg);
 
 

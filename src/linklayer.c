@@ -111,6 +111,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 		if (command.command == NONE){
 			retries++;
 			stats.timeouts++;
+			//printf("\nNumber of retries: %d\n", retries);
 			alarm(0);
 		}
 		//puts("byte was rejected,resending or no response\n");
