@@ -110,6 +110,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	if (command.command == REJ(ll.sequenceNumber) || (command.command == NONE && ll.numTransmissions > retries)){
 		if (command.command == NONE){
 			retries++;
+			stats.timeouts++;
 			alarm(0);
 		}
 		//puts("byte was rejected,resending or no response\n");
