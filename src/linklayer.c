@@ -162,7 +162,7 @@ int llread(int fd, unsigned char **buffer){
 			//puts("llread: destuffing succeeded\n");
 			int bccOK = verifyBCC(command.data, length, command.data[length-1]);
 
-			if(getRand() < 5){
+			if(getRand() < RANDOM_REJ_CHANCE){
 				bccOK = 0;
 				puts("\n randomly rejecting good packet");
 			}
