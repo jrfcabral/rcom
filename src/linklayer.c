@@ -437,9 +437,11 @@ send: ;
 	return 0;
 }
 
-void printStatistics(){
+void printStatistics(int visMode){
 	FILE* file = fopen("statistics.log", "w+");
 	fprintf(file, "Number of data frames written: %d\n Number of rejected frames: %d\n Number of timeouts: %d\n", stats.dataFramesTransmitted, stats.rejs, stats.timeouts);
+	if(visMode != 0)
+		printf("Number of data frames written: %d\n Number of rejected frames: %d\n Number of timeouts: %d\n", stats.dataFramesTransmitted, stats.rejs, stats.timeouts);
 	fclose(file);
 			
 }

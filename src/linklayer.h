@@ -109,7 +109,7 @@ typedef struct {
 
 LinkLayer ll;
 Stats stats;
-
+	
 //declarations
 int byteStuffing(const char* buffer, const int length, char** stuffedBuffer);
 int byteDeStuffing(unsigned char** buf, int length);
@@ -120,4 +120,6 @@ int llread(int fd, unsigned char **buffer);
 int verifyBCC(unsigned char* data, int datalength, char correctBCC);
 int sendByte(int fd, char, char );
 Command receiveCommand(int fd);
-void printStatistics(void);
+void printStatistics(int);
+
+

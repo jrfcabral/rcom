@@ -68,7 +68,7 @@ int main(int argc, char **argv){
 		perror("could not transmit file");
 		return result;
 	}
-	printStatistics();
+	printStatistics(visMode);
 	return 0;
 }
 
