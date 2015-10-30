@@ -8,11 +8,10 @@ int alarmOff = 0;
 void alarmHandler(int signal){
 	if(signal != SIGALRM)
 		return;
-	static int currentTries = 0;
 	alarmOff = 1;
 	//aqui é necessario incrementar os stats das laylinks(ll)
 	printf("\nConnection timed out!\nTrying again:\n");
-	currentTries++;
+	retries++;
 	if (retries < ll.numTransmissions)
 		resend = 1;
 	else

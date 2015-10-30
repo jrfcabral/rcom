@@ -97,7 +97,9 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	free(message);
 	free(bufferStuffed);
 	alarm(ll.timeOut);
+	
 	Command command = receiveCommand(fd);
+	
 	//was asked for new frame
 	if (command.command == RR(!ll.sequenceNumber)){
 		ll.sequenceNumber = (!ll.sequenceNumber);
@@ -109,7 +111,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	//frame was rejected, resend
 	if (command.command == REJ(ll.sequenceNumber) || (command.command == NONE && ll.numTransmissions > retries)){
 		if (command.command == NONE){
-			retries++;
+			
 			stats.timeouts++;
 			//printf("\nNumber of retries: %d\n", retries);
 			alarm(0);
@@ -158,6 +160,11 @@ int llread(int fd, unsigned char **buffer){
 			int length = byteDeStuffing(&(command.data), command.size);
 			//puts("llread: destuffing succeeded\n");
 			int bccOK = verifyBCC(command.data, length, command.data[length-1]);
+
+			if(getRand() != 55){
+				bccOK = 0;
+			}
+
 			//Reject frames with wrong BCC
 			if(!bccOK){
 				//puts("llread: frame was damaged, rejecting and rereading\n");
@@ -420,7 +427,7 @@ send: ;
 
 	if(command.command == NONE){
 
-		retries++;
+		
 		if (ll.numTransmissions < retries){
 			puts("llopen_writer timeouts exceeded");
 			return -1;
@@ -446,4 +453,10 @@ void printStatistics(int visMode){
 		printf("Number of data frames written: %d\n Number of rejected frames: %d\n Number of timeouts: %d\n", stats.dataFramesTransmitted, stats.rejs, stats.timeouts);
 	fclose(file);
 			
+}
+
+int getRand(){
+	srand(time(NULL));
+	int r = rand() % 100 + 1;
+	return r;
 }

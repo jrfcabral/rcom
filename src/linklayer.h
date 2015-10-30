@@ -15,6 +15,7 @@ The link layer is the group of methods and communications protocols that only op
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 
 
 #define FALSE 0
