@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#define PACKET_SIZE 100
+int PACKET_SIZE = 100;
 #define TYPE_FILE_SIZE 0
 #define TYPE_FILE_NAME 1
 

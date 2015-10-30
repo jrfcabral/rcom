@@ -349,9 +349,6 @@ int llopen(const char* port, int mode){
 		exit(-1);
 	}
 
-	ll.baudRate = BAUDRATE;
-	ll.timeOut = 3;
-	ll.numTransmissions = 3;
 
 	struct termios oldTio, newTio;
 

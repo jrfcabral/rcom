@@ -326,10 +326,10 @@ int printProgressBar(char *progressBar, float perc){
 
 int printTutorial(){
 	printf("Available options: \n");
-	printf("-b=[num]\tChanges the baudrate to num. Default is %d\nWARNING: If the receiver's baudrate is significantly lower than the sender's, it might cause the program to fail.\n", BAUDRATE);
-	printf("-m=[num]\tSets the number of times the program will try to transmit the same frame before exiting. Default is 3\n");
-	printf("-t=[num]\tSets the time (in seconds) the sender will wait for a response before resending the current frame. Default is 3.\n");
-
+	printf("-b=[num]:\tChanges the baudrate to num. Default is %d\nWARNING: If the receiver's baudrate is significantly lower than the sender's, it might cause the program to fail.\n", BAUDRATE);
+	printf("-m=[num]:\tSets the number of times the program will try to transmit the same frame before exiting. Default is 3\n");
+	printf("-t=[num]:\tSets the time (in seconds) the sender will wait for a response before resending the current frame. Default is 3.\n");
+	printf("-p=[num]:\tSets the number of data bytes sent per package. Default is 100.\n");
 	return 0;	
 }
 
@@ -337,7 +337,7 @@ int parseParams(char *param){
 	
 		if(!strncmp("-b", param, 2)){
 			char *temp = malloc(3);
-			memcpy(temp, (param+3), 2);
+			memcpy(temp, (param+3), strlen(param)-3);
 			ll.baudRate = atoi(temp);
 			if(ll.baudRate < 1){
 				printf("\nError: Baudrate cannot be negative or 0.\n");
@@ -347,7 +347,7 @@ int parseParams(char *param){
 		}
 		else if(!strncmp("-m", param, 2)){
 			char *temp = malloc(3);
-			memcpy(temp, (param+3), 2);
+			memcpy(temp, (param+3), strlen(param)-3);
 			ll.numTransmissions = atoi(temp);
 			if(ll.numTransmissions < 1){
 				printf("\nError: Number of retries cannot be negative or 0.\n");
@@ -358,12 +358,23 @@ int parseParams(char *param){
 
 		else if(!strncmp("-t", param, 2)){
 			char *temp = malloc(3);
-			memcpy(temp, (param+3), 2);
+			memcpy(temp, (param+3), strlen(param)-3);
 			ll.timeOut = atoi(temp);
 			if(ll.timeOut < 1){
 				printf("\nError: Timeout cannot be negative or 0.\n");
 			}
 			printf("\ntimeOut changed to %d\n", ll.timeOut);
+			return -1;
+		}
+
+		else if(!strncmp("-p", param, 2)){
+			char *temp = malloc(3);
+			memcpy(temp, (param+3), strlen(param)-3);
+			PACKET_SIZE = atoi(temp);
+			if(PACKET_SIZE < 1){
+				printf("\nError: Packet size cannot be negative or 0.\n");
+			}
+			printf("\nPACKET_SIZE changed to %d\n", PACKET_SIZE);
 			return -1;
 		}
 	
