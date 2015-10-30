@@ -74,11 +74,11 @@ int llwrite(int fd, unsigned char* buffer, int length){
 
 	int n= byteStuffing(toStuff,  length+1, &bufferStuffed);
 
-	int k;
+	//int k;
 	//puts("");
-	for (k=0;k<n;k++){
+	//for (k=0;k<n;k++){
 		//printf("\n%d\n", bufferStuffed[k]);
-	}
+	//}
 	//	puts("");
 	char* message = (char*)  malloc(n+6);
 
@@ -111,11 +111,11 @@ int llwrite(int fd, unsigned char* buffer, int length){
 			retries++;
 			alarm(0);
 		}
-		puts("byte was rejected,resending or no response\n");
+		//puts("byte was rejected,resending or no response\n");
 		return llwrite(fd, buffer, length);
 	}
 	else{
-		puts("eu esperei mas o reader nao me quis responder :(");
+		//puts("eu esperei mas o reader nao me quis responder :(");
 		return -1;
 	}
 
@@ -329,7 +329,7 @@ int llclose(int fd){
 	//puts("received a disc");
 	if(!sendByte(fd, A_RECEIVE, C_UA))
 		return -1;
-	puts("confirmed");
+	//puts("confirmed");
 	return 1;
 }
 
@@ -383,7 +383,7 @@ int llopen(const char* port, int mode){
 
 	  Command command = receiveCommand(fd);
 		if(command.command == SET){
-			puts("llopen_receive: received SET message\n");
+			//puts("llopen_receive: received SET message\n");
 			while(!sendByte(fd, UA, 0x03)){}
 			return fd;
 		}
@@ -422,7 +422,7 @@ send: ;
 			return -1;
 		}
 		else{
-			puts("llopen_writer timeout");
+			//puts("llopen_writer timeout");
 			goto send;
 		}
 	}

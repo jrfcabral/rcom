@@ -1,6 +1,8 @@
 #include "linklayer.h"
 #include "applicationlayer.h"
 
+int visMode = 1;
+
 //1- porta
 //2- modo (SEND | RECEIVE)
 //3- filepath
@@ -32,7 +34,8 @@ int main(int argc, char **argv){
 	if((argc > 4 && mode == SEND) || (argc > 3 && mode == RECEIVE)){
 		int i;
 		for(i = 0; i < argc-(mode==SEND?4:3); i++){
-			parseParams(argv[i+(mode==SEND?4:3)]);
+			if(parseParams(argv[i+(mode==SEND?4:3)]) == -1)
+				return -1;
 		}
 	}	
 	
@@ -114,13 +117,9 @@ int sendFile(int port, int fd, char *filePath)
 		buffer += PACKET_SIZE;
 
 		acum += PACKET_SIZE;
-		/*if((float)acum/(float)size >= 0.02){
-			printf("#");
-			acum = 0;
-		}*/
 		proBar = updateProgressBar(acum, size, &percentage);
-		printProgressBar(proBar, percentage);
-		//printf("%.2f%%", percentage);
+		if(visMode != 0)
+			printProgressBar(proBar, percentage);
 		
 
 	}
@@ -137,7 +136,8 @@ int sendFile(int port, int fd, char *filePath)
 		acum += (size % PACKET_SIZE);
 		
 		proBar = updateProgressBar(acum, size, &percentage);
-		printProgressBar(proBar, percentage);
+		if(visMode != 0)
+			printProgressBar(proBar, percentage);
 		printf("\n");
 		
 	}
@@ -158,9 +158,9 @@ int readFile(int port)
 {
 	ControlPacket packet;
 	while(!getControlPacket(port, &packet)){}
-	//puts("recebi pacote de inicio");
+	puts("\nGot beginning packet");
 	if(packet.end != CONTROL_PACKET_BEGIN){
-		//printf("readFile error: didn't receive expected start control package\n");
+		printf("Error: didn't receive expected start control package\n");
 		return -1;
 	}
 
@@ -174,17 +174,18 @@ int readFile(int port)
 	while(getDataPacket(port, &dataPacket) != E_NOTDATA){
 
 		if (expectedSequenceNumber != dataPacket.sequenceNumber){
-			printf("error in packet sequence: expected packet no %u and got packet no %u\n", expectedSequenceNumber, dataPacket.sequenceNumber);
+			printf("Error in packet sequence: expected packet no %u and got packet no %u\n", expectedSequenceNumber, dataPacket.sequenceNumber);
 		exit(-1);
 		}
 		expectedSequenceNumber++;
 		expectedSequenceNumber %= 255;
 		
-		//printf("data packet with size %d\n", dataPacket.size);
+		//printf("Received data packet with size %d\n", dataPacket.size);
 		write(file, dataPacket.data, dataPacket.size);
 		acum += dataPacket.size;
 		proBar = updateProgressBar(acum, packet.size, &percentage);
-		printProgressBar(proBar, percentage);
+		if(visMode != 0)
+			printProgressBar(proBar, percentage);
 
 	}
 	printf("\n");
@@ -326,6 +327,7 @@ int printProgressBar(char *progressBar, float perc){
 
 int printTutorial(){
 	printf("Available options: \n");
+	printf("-q:\tMakes the program run quietly (i.e no output is shown)\n");	
 	printf("-b=[num]:\tChanges the baudrate to num. Default is %d\nWARNING: If the receiver's baudrate is significantly lower than the sender's, it might cause the program to fail.\n", BAUDRATE);
 	printf("-m=[num]:\tSets the number of times the program will try to transmit the same frame before exiting. Default is 3\n");
 	printf("-t=[num]:\tSets the time (in seconds) the sender will wait for a response before resending the current frame. Default is 3.\n");
@@ -375,6 +377,15 @@ int parseParams(char *param){
 				printf("\nError: Packet size cannot be negative or 0.\n");
 			}
 			printf("\nPACKET_SIZE changed to %d\n", PACKET_SIZE);
+			return -1;
+		}
+
+		else if(!strncmp("-q", param, 2)){
+			visMode = 0;
+		}
+
+		else{
+			printf("Error: Unknown option %s\n", param);
 			return -1;
 		}
 	
