@@ -343,9 +343,9 @@ int parseParams(char *param){
 			ll.baudRate = atoi(temp);
 			if(ll.baudRate < 1){
 				printf("\nError: Baudrate cannot be negative or 0.\n");
+				return -1;
 			}
-			printf("\nBaudrate changed\n");
-			return -1;
+			//printf("\nBaudrate changed\n");
 		}
 		else if(!strncmp("-m", param, 2)){
 			char *temp = malloc(3);
@@ -353,9 +353,10 @@ int parseParams(char *param){
 			ll.numTransmissions = atoi(temp);
 			if(ll.numTransmissions < 1){
 				printf("\nError: Number of retries cannot be negative or 0.\n");
+				return -1;
 			}
-			printf("\nnumTransmissions changed\n");
-			return -1;
+			//printf("\nnumTransmissions changed\n");
+			
 		}
 
 		else if(!strncmp("-t", param, 2)){
@@ -364,9 +365,10 @@ int parseParams(char *param){
 			ll.timeOut = atoi(temp);
 			if(ll.timeOut < 1){
 				printf("\nError: Timeout cannot be negative or 0.\n");
+				return -1;
 			}
-			printf("\ntimeOut changed to %d\n", ll.timeOut);
-			return -1;
+			//printf("\ntimeOut changed to %d\n", ll.timeOut);
+			
 		}
 
 		else if(!strncmp("-p", param, 2)){
@@ -375,9 +377,10 @@ int parseParams(char *param){
 			PACKET_SIZE = atoi(temp);
 			if(PACKET_SIZE < 1){
 				printf("\nError: Packet size cannot be negative or 0.\n");
+				return -1;
 			}
-			printf("\nPACKET_SIZE changed to %d\n", PACKET_SIZE);
-			return -1;
+			//printf("\nPACKET_SIZE changed to %d\n", PACKET_SIZE);
+			
 		}
 
 		else if(!strncmp("-q", param, 2)){
