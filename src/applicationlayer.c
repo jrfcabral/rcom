@@ -332,6 +332,7 @@ int printProgressBar(char *progressBar, float perc){
 	for(i = 0; i <= 60; i++){
 		printf("\b");
 	}
+	free(progressBar);
 	return 0;
 }
 
@@ -407,7 +408,7 @@ int parseParams(char *param){
 }
 
 int printUsage(char *arg){
-	printf("Usage: %s /dev/ttySx or /dev/pts/x  0 to send or 1 to read file path(if executed as sender)\n x = port num\nFor more info use %s --help\n", arg, arg);
+	printf("Usage: %s /dev/ttySx or /dev/pts/x,  send or receive, path(if executed as sender)\n x = port num\nFor more info use %s --help\n", arg, arg);
 	return 0;
 }
 
