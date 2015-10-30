@@ -91,6 +91,7 @@ int llwrite(int fd, unsigned char* buffer, int length){
 	stats.dataFramesTransmitted++;
 
 
+
 //puts("message sent\n");
 
 	free(message);
@@ -149,6 +150,7 @@ int llread(int fd, unsigned char **buffer){
 	if (command.command == I(0) || command.command == I(1)){
 		//puts("llread: received a data frame\n");
 		//if we never saw this frame before, consider it
+		stats.dataFramesTransmitted++;
 		if(!repeated){
 			//puts("llread: new data frame\n");
 			int length = byteDeStuffing(&(command.data), command.size);

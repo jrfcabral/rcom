@@ -68,6 +68,7 @@ int main(int argc, char **argv){
 		perror("could not transmit file");
 		return result;
 	}
+	printStatistics();
 	return 0;
 }
 
@@ -395,3 +396,4 @@ int parseParams(char *param){
 	return 0;
 
 }
+
