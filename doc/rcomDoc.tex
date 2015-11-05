@@ -1,0 +1,232 @@
+\documentclass{article}
+
+%use the english line for english reports
+%usepackage[english]{babel}
+\usepackage[portuguese]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{verbatim}
+
+
+\usepackage{listings}
+\usepackage{color}
+ %veio daqui: http://stackoverflow.com/questions/3175105/how-to-insert-code-into-a-latex-doc
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=C,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+\begin{document}
+
+\setlength{\textwidth}{16cm}
+\setlength{\textheight}{22cm}
+
+\title{
+\Large\textbf{Relatório}\linebreak\linebreak
+\linebreak\linebreak
+\includegraphics[scale=0.1]{feup-logo.png}\linebreak\linebreak
+\linebreak\linebreak
+\Large{Mestrado Integrado em Engenharia Informática e Computação} \linebreak\linebreak
+\Large{Redes de Computadores}\linebreak
+}
+
+\author{\textbf{Autores:}\\
+João Rafael de Figueiredo Cabral - 201304395 \\
+João Bernardo Martins de Sousa e Silva Mota - 201303462 \\
+Luís Telmo Costa - 200806068\\
+\linebreak\linebreak \\
+ \\ Faculdade de Engenharia da Universidade do Porto \\ Rua Roberto Frias, s\/n, 4200-465 Porto, Portugal \linebreak\linebreak\linebreak
+\linebreak\linebreak\vspace{1cm}}
+
+\maketitle
+\thispagestyle{empty}
+
+%---------
+
+\newpage
+
+%bota-se ao despois um indice
+
+\section{Introdução}
+
+No âmbito da unidade curricular Redes de Computadores do MIEIC, foi-nos proposta a elaboração de um programa de envio e receção de ficheiros através da interface com um cabo de série RS-232, e baseado num protocolo de ligação de dados, também a ser implementado pelo grupo.\\\\
+Para o referido trabalho, constavam da especificação fornecida diretrizes para a elaboração de um protocolo de ilgação de dados baseado em técnicas já exitentes, como sejam o protocolo \textit{Stop and Wait}, ou a técnica de \textit{byte stuffing}. \\\\%enumerar tudo cmo fez o ferrolho?
+Quanto à camada de aplicação, foi pedida o suporte de pacotes de dois tipos, a saber, pacotes de controlo, sinalizando o início e o fim da transmissão corrente, e pacotes de informação, contendo fragmentos do ficheiro a transferir.
+
+\newpage
+
+\section{Camada de ligação lógica}
+%falar dos tipos de tramas??
+Esta camada implementa os mecanismos de base para a transmissão de informação de forma correta e segura entre dispositivos, servindo assim também de base à camada de aplicação apresentada abaixo. %bota link 
+Assim sendo, enumeram-se aqui as funcionalidades da presente camada:
+
+\begin{itemize}
+    \item Establecimento e terminação da ligação entre dois dispositivos.
+    \item Escrita e leitura de informação na forma de tramas através do cabo de série.
+    \item Formação de cabeçalhos apropriados para a correta interpreação da informação enviada.
+    \item Interpretação e validação da informação recebida.
+    \item Aplicação das técnicas de \textit{stuffing} e \textit{destuffing} apropriadas à não corrupção das tramas.
+    %falar dos timeouts?
+\end{itemize}
+As funcionalidades acima descritas encontram-se, na sua maioria, implementadas num conjunto de quatro funções, conforme a especificação: \textbf{llopen} \textbf{llclose} \textbf{llread} e \textbf{llwrite}.\\
+
+\subsection{llopen}
+
+Esta função é reponsável pela configuração da porta de série, e posteriormente pelo establecimento da ligação entre leitor e recetor. A função apresenta comportamentos distintos de acordo com uma \textit{flag} que lhe é passada por parametro, a qual indica o papel do programa (leitor ou escritor).\\
+
+\begin{lstlisting}
+if(mode == RECEIVE){
+		newTio.c_lflag = 0;
+
+		newTio.c_cc[VTIME]    = 0;   /* inter-character timer unused */
+		newTio.c_cc[VMIN]     = 1;   /* blocking read until 1 chars received */
+
+		tcflush(fd, TCIOFLUSH);
+
+		if ( tcsetattr(fd,TCSANOW,&newTio) == -1) {
+			perror("tcsetattr");
+			exit(-1);
+		}
+(...)
+
+else if(mode == SEND){
+		newTio.c_lflag = 0;
+
+		newTio.c_cc[VTIME]    = 10;   /* inter-character timer unused */
+		newTio.c_cc[VMIN]     = 0;   /* blocking read until 1 chars received */
+
+		tcflush(fd, TCIOFLUSH);
+
+		if ( tcsetattr(fd,TCSANOW,&newTio) == -1) {
+			perror("tcsetattr");
+			exit(-1);
+		}
+		(...)
+
+\end{lstlisting}
+
+Ao fazer isto, garante-se para o escritor uma leitura que não bloqueia, saíndo ao fim de um segundo da função. Isto é pertinente, visto ser necessário ao escritor verificar se ocorreu um \textit{timeout} e, em caso positivo, reenviar a trama pretendida. Será de realçar que a configuração acima apresentada não constitui a totalidade das configurações necessárias à utilização correta do cabo série, mas apenas as secções onde essa configuração difere entre os dois papeis.\\\\
+
+Feita esta configuração, é enviada pelo escritor uma trama do tipo SET. O leitor, tendo recebido, validado e interpretado esta trama, enviará uma trama do tipo UA como confirmação. Nesta altura, dar-se-à por establecida a ligação.
+
+\subsection{llclose}
+Esta função tem como propósito o início do processo de terminação da ligação entre dois dispositivos. A mesma deverá ser chamada apenas pelo programa escritor. Chamando a função será enviada uma trama do tipo DISC e o leitor ficará à espera de uma trama do mesmo tipo enviado pelo leitor. Recebida a mesma, o leitor enviará uma trama do tipo UA e prontamente terminará a ligação.
+
+\subsection{llwrite}
+Esta função é utilizada para escrever toda e qualquer trama de informação que seja necessário enviar. Para tal, ela recebe como parametro o descritor do ficheiro para onde vai escrever, o \textit{buffer} com a informação a enviar e o comprimento do mesmo.\\\\
+
+A função procede assim à geração do código detetor de erros (BCC) referente aos dados (não confundir com o código detetor de erros correspondente ao cabeçalho), passando de seguida ao stuffing do buffer recebido e do BCC gerado.\\
+Feito isto, o buffer "\textit{stuffed}" (incluíndo BCC) é acoplado a um cabeçalho pré-formado e é acrescentado um último byte de FLAG, simbolizando o fim da trama.\\
+Após tudo isto a trama fabricada é efetivamente enviada e o escritor fica à espera de uma resposta do leitor. O leitor, poderá enviar como resposta uma trama do tipo RR(I), sendo I o número de série da trama que espera receber a seguir (no contexto do nosso programa, I toma apenas os valores 0 e 1), ou uma trama do tipo REJ(I), onde I representa o número de série da trama que espera receber a seguir (em princípio, este número de série será o mesmo que aquele que tinha a trama que gerou esta resposta por parte do leitor). %isto ta certo?
+\\Neste último caso, ou caso ocorra um \textit{timeout}, a função chama-se a si própria recursivamente com os mesmos parametros, incrementando em 1 o valor de tentativas de envio efetuadas e reenviando a trama indicada pelo leitor.
+
+\subsection{llread}
+Esta função é utilizada pelo leitor para receber, validar e interpretar as tramas de informação enviadas pelo escritor, tendo também capacidade de reconhecer tramas do tipo DISC.\\
+
+Recebida uma trama, a função verifica se o número de série é o esperado.\\
+Verificando-se essa condição, é feito o "\textit{destuffing}" dos dados recebidos e é verificado o código detetor de erros, rejeitando-se a trama imediatamente caso este código indique anómalias.\\
+Em alguns casos, pode ainda ocorrer uma rejeição aleatória da trama recebida, apesar da correção do código detetor de erros, com base numa probabilidade pré-definida (no contexto do nosso programa de 5\%). Isto ocorre de forma a testar a correção do protocolo que lida com esse tipo de situações.\\
+Finalmente, se a verificação do número de série indicar que tudo está como esperado, os dados recebidos são passados para um buffer passado por referência à função e é enviada a confirmação ao escritor. Caso a verificação dos números de série indique anómalias, a trama será na mesma confirmada, pedindo ao escritor a trama com onúmero de série esperado.
+
+\subsection{\textit{Stuffing} e \textit{Destuffing}}
+De forma a proteger a integridade das tramas de informação, é necessário tomar medidas que previnam o aparecimento de indicadores de fim de trama no campo de dados. Assim, recorre-se à técnica conhecida por \textit{byte stuffing} lecionada na unidade curricular.\\
+
+No contexto do nosso programa, isto foi implementado, da seguinte forma:
+
+\begin{lstlisting}
+int byteStuffing(const char* buffer, const int length, char** stuffedBuffer){
+	int n;
+	*stuffedBuffer = (char*) malloc(1);
+	int newLength = 0;
+	for(n = 0; n < length; n++){
+		if (buffer[n] == FLAG || buffer[n] == ESCAPE){
+			newLength+=2;
+			*stuffedBuffer = realloc(*stuffedBuffer, newLength);
+			stuffedBuffer[0][newLength-2]=ESCAPE;
+			stuffedBuffer[0][newLength-1]= buffer[n]^0x20;
+		}
+		else{
+			*stuffedBuffer = realloc(*stuffedBuffer, ++newLength);
+			stuffedBuffer[0][newLength-1] = buffer[n];
+		}
+	}
+	return newLength;
+}
+
+
+
+int byteDeStuffing(unsigned char** buf, int length) {
+	int i;
+	for (i = 0; i < length; i++){
+		if ((*buf)[i] == ESCAPE) {
+			memmove(*buf + i, *buf + i + 1, length - i - 1);
+			length--;
+			(*buf)[i] ^= 0x20;
+		}
+	}
+	*buf = (unsigned char*) realloc(*buf, length);
+	return length;
+}
+\end{lstlisting}
+
+Para o "\textit{stuffing}", o buffer com os dados a enviar é percorrido de ponta a ponta. Encontrado um byte indicador de fim de trama (FLAG) ou um byte de escape (ESCAPE), o buffer que guarda a mensagem "\textit{stuffed}", vê o seu tamanho incrementado em 2, sendo colocado um byte ESCAPE antes do byte encontrado, seguido desse mesmo byte com a operação de ou-exclusivo com \textit{0x20} aplicada. Caso o byte não seja um dos indicados acima, este é simplesmente copiado para o segundo buffer.\\
+No "\textit{destuffing}", o buffer recebido por parametro é também percorrido de ponta a ponta. Encontrado um ESCAPE, todos os bytes a partir do encontrado (exclusivé) são \textit{shifted} em uma unidade para a esquerda de forma a sobrepor o mesmo, e o comprimento do buffer é decrementado em uma unidade.
+
+\section{Camada de aplicação}
+A camada de aplicação é a camada de mais alto nível deste programa, assentando sobre a camada de ligação lógica exposta acima. Esta camada é reponsável pelo envio dos dados correpondentes ao ficheiro que se pretendo transferir, bem como pela impressão da informação pertinente ao utilizador no ecrã. Mais concretamente as funcionalidades implementadas na seguinte camada são as seguintes:\\
+\begin{itemize}
+   \item Verificação do papel do programa (envio ou receção) e efetuar a validação dos parametros fornecidos de acordo com essa informação.
+   \item Compartimentalização e envio de dados correspondentes ao ficheiro a transferir.
+   \item Formação de cabçalhos de aplicação apropriados para a correta interpretação da informação enviada
+   \item Interpretação, validação e junção dos dados correspondentes ao ficheiro a receber
+   \item Impressão no ecrã de informação pertinente ao utilizador, como seja a barra de progresso e as estatísticas de envio
+\end{itemize}
+
+As funcionalidades acima descritas encontram-se maioritariamente nas funções \textbf{sendFile} e \textbf{readFile}, sendo também pertinente realçar a validação e interpretação dos parametros introduzidos pelo utilizador.
+
+\newpage
+
+\subsection{Parametros do utilizador}
+No programa desenvolvido estão disponíveis ao utilizador algumas opções de configuração que podem ser passadas ao mesmo por parametros na linha de comandos. São estas:\\
+\begin{itemize}
+   \item \textit{Quiet Mode}(-q): Quando é passado este parametro, o programa corre sem imprimir nada na consola exceto qualquer eventual erro.%(mas muito remoto) erro. 
+   \item \textit{Baudrate}(-b): Permite passar o valor desejado para a Baudrate.
+   \item Número de tentativas de envio da mesma trama (-m).
+   \item Segundos até \textit{timeout} (-t).
+   \item Número de \textit{bytes} de dados por pacote (-p).
+\end{itemize}
+
+É da opinião do grupo que esta funcionalidade dá ao programa uma certa parecença com um comando comum de \textit{linux}, algo que cremos ser uma boa alternativa a um programa com uma interface em linha de comandos.
+
+\subsection{sendFile}
+Esta função é chamada pelo escritor depois de ter sido establecida a ligação recorrendo a funções presentes na camada de ligação lógica.\\
+Logo após ser chamada, a função mapeia para memória o ficheiro a transferir, de forma a ter acesso mais fácil aos conteúdos do mesmo, sendo guardados dois apontadores para o início da região de memória correspondente.\\
+De seguida é fabricado e enviado um pacote de controlo simbolizando o início da transmissão.\\ 
+Depois disto, a função envia pacotes com dados correspondentes aos primeiros \textbf{n} bytes do apontador, onde 
+\textbf{n} é o número de \textit{bytes} de dados máximo por pacote, avançando de seguida o apontador \textbf{n} posições. Este processo repete-se até que não seja possível formar uma trama com o número máximo de \textit{bytes} de dados, situação na qual se fabrica um pacote com o restante número de \textit{bytes}, ou, se não restarem nenhuns, procedendo-se ao envio de outro pacote de controlo, simbolizando o fim da transmissão.\\
+Durante todo este processo, estará a ser imprimida no ecrã uma barra de progresso correspondente à percentagem do ficheiro que foi já enviada ou recebida, bem como essa percentagem em número concreto.\\ 
+Finalmente, recorrendo a funções da camada de ligação lógica, a ligação é terminada a região de memória para onde foi mapeado o ficheiro é libertada com recurso ao segundo apontador criado, visto que o primeiro, utilizado no processo de envio de pacotes de dados, não se encontra a apontar para o início dessa região, mas para o fim.
+
+\subsection{readFile}
+Esta função é chamada pelo leitor após establecida a ligação. A função fica à espera de receber um pacote de controlo, simbolizando o início de transmissão de um ficheiro.\\
+De seguida será extraída deste pacote a informação pertinente, como seja o nome do ficheiro e o seu tamanho.\\
+Depois a função ficará à espera de ler pacotes de dados, validando a informação e escrevendo os dados recebidos para um ficheiro no sistema de ficheiros local. Isto ocorre até que seja recebido um outro pacote de controlo, simbolizando o fim da transmissão, situação na qual o programa terminará a ligação e sairá em segurança.\\
+Como foi referido acima, durante todo este processo estará a ser impressa uma barra de progresso refernete à percentagem do ficheiro recebida.
+\end{document}
