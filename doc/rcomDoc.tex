@@ -62,15 +62,46 @@ Luís Telmo Costa - 200806068\\
 
 \newpage
 
-%bota-se ao despois um indice
+\section{Sumário}
+No âmbito da unidade curricular Redes de Computadores do MIEIC, foi proposta a elaboração de um programa de envio e receção de ficheiros através da interface com um cabo de série RS-232, e baseado num protocolo de ligação de dados.\\\\
+Após implementação do programa referido supra, pode concluir-se que %bota bullshit
 
 \section{Introdução}
+O trabalho sobre o qual se escreve neste relatório teve como objetivo a implementação de um protocolo de ligação lógica baseado em técnicas lecionadas nas aulas da unidade curricular, técnicas estas que se integram em protocolos já existentes.\\
+Outro objetivo do trabalho era a implementação de uma aplicação de transferência de ficheiros que se apoiasse no protocolo de ligação lógica implementado, de forma a testar o seu funcionamento.\\
+Serve assim o presente relatório como um método de consolidação entre a teoria e a prática no que diz respeito ao projeto implementado. O relatório divide-se então nas seguintes secções: 
 
-No âmbito da unidade curricular Redes de Computadores do MIEIC, foi-nos proposta a elaboração de um programa de envio e receção de ficheiros através da interface com um cabo de série RS-232, e baseado num protocolo de ligação de dados, também a ser implementado pelo grupo.\\\\
-Para o referido trabalho, constavam da especificação fornecida diretrizes para a elaboração de um protocolo de ilgação de dados baseado em técnicas já exitentes, como sejam o protocolo \textit{Stop and Wait}, ou a técnica de \textit{byte stuffing}. \\\\%enumerar tudo cmo fez o ferrolho?
-Quanto à camada de aplicação, foi pedida o suporte de pacotes de dois tipos, a saber, pacotes de controlo, sinalizando o início e o fim da transmissão corrente, e pacotes de informação, contendo fragmentos do ficheiro a transferir.
+\begin{itemize}
+    \item Arquitetura - Informação sobre os principais blocos funcionais e interfaces.
+    \item Estrutura do código - Informação sobre as principais estruturas de dados implementadas, principais funções e a sua relação com a arquitetura.
+    \item Casos de uso principais - Informação sobre a forma como o programa pode ser utilizado.
+    \item Protocolo de ligação lógica
+    \item Protocolo de aplicação
+    \item Validação
+    \item Elementos de Valorização
+    \item Conclusões
+\end{itemize}
 
-\newpage
+\section{Arquitetura}
+\subsection{Interface}
+No programa desenvolvido estão disponíveis ao utilizador algumas opções de configuração que podem ser passadas ao mesmo por parametros na linha de comandos. São estas:\\
+\begin{itemize}
+   \item \textit{Quiet Mode}(-q): Quando é passado este parametro, o programa corre sem imprimir nada na consola exceto qualquer eventual erro.%(mas muito remoto) erro. 
+   \item \textit{Baudrate}(-b): Permite passar o valor desejado para a Baudrate.
+   \item Número de tentativas de envio da mesma trama (-m).
+   \item Segundos até \textit{timeout} (-t).
+   \item Número de \textit{bytes} de dados por pacote (-p).
+\end{itemize}
+
+É da opinião do grupo que esta funcionalidade dá ao programa uma certa parecença com um comando comum de \textit{linux}, algo que cremos ser uma boa alternativa a um programa com uma interface em linha de comandos.
+
+\subsection{Blocos funcionais}
+O programa divide-se em dois grandes blocos: a camada de ligação lógica, responsável por toda a comunicação através da porta série, e a camada de aplicação, responsável pelo envio do ficheiro escolhido, bem como pela impressão de informação no ecrã.
+
+\section{Estrutura do código}
+% Esta deixo pra ti :P
+
+
 
 \section{Camada de ligação lógica}
 %falar dos tipos de tramas??
@@ -201,20 +232,6 @@ A camada de aplicação é a camada de mais alto nível deste programa, assentan
 
 As funcionalidades acima descritas encontram-se maioritariamente nas funções \textbf{sendFile} e \textbf{readFile}, sendo também pertinente realçar a validação e interpretação dos parametros introduzidos pelo utilizador.
 
-\newpage
-
-\subsection{Parametros do utilizador}
-No programa desenvolvido estão disponíveis ao utilizador algumas opções de configuração que podem ser passadas ao mesmo por parametros na linha de comandos. São estas:\\
-\begin{itemize}
-   \item \textit{Quiet Mode}(-q): Quando é passado este parametro, o programa corre sem imprimir nada na consola exceto qualquer eventual erro.%(mas muito remoto) erro. 
-   \item \textit{Baudrate}(-b): Permite passar o valor desejado para a Baudrate.
-   \item Número de tentativas de envio da mesma trama (-m).
-   \item Segundos até \textit{timeout} (-t).
-   \item Número de \textit{bytes} de dados por pacote (-p).
-\end{itemize}
-
-É da opinião do grupo que esta funcionalidade dá ao programa uma certa parecença com um comando comum de \textit{linux}, algo que cremos ser uma boa alternativa a um programa com uma interface em linha de comandos.
-
 \subsection{sendFile}
 Esta função é chamada pelo escritor depois de ter sido establecida a ligação recorrendo a funções presentes na camada de ligação lógica.\\
 Logo após ser chamada, a função mapeia para memória o ficheiro a transferir, de forma a ter acesso mais fácil aos conteúdos do mesmo, sendo guardados dois apontadores para o início da região de memória correspondente.\\
@@ -229,4 +246,15 @@ Esta função é chamada pelo leitor após establecida a ligação. A função f
 De seguida será extraída deste pacote a informação pertinente, como seja o nome do ficheiro e o seu tamanho.\\
 Depois a função ficará à espera de ler pacotes de dados, validando a informação e escrevendo os dados recebidos para um ficheiro no sistema de ficheiros local. Isto ocorre até que seja recebido um outro pacote de controlo, simbolizando o fim da transmissão, situação na qual o programa terminará a ligação e sairá em segurança.\\
 Como foi referido acima, durante todo este processo estará a ser impressa uma barra de progresso refernete à percentagem do ficheiro recebida.
+
+\section{Elementos de valorização}
+Ao longo das secções acima, foi descrita alguma da funcionalidade correspondente aos elementos de valorização implementados. Mais concretamente foi implementado:
+
+\begin{itemize}
+    \item Selecção de parâmetros pelo utilizador, sendo pertinente realçar que no programa implementado estão disponíveis mais opções do que as que constam no guião.
+    \item Geração aleatória de erros em tramas de Informação.
+    \item Registo de ocorrências, as quais são apresentadas ao utilizador no fim do programa, sendo também escritas num ficheiro disponível no diretorio onde se encontra o ficheiro executável.
+    \item Barra de progresso %manter???
+\end{itemize}
+
 \end{document}
